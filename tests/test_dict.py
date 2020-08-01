@@ -1,5 +1,5 @@
 from tempfile import NamedTemporaryFile
-from aiofile import AIOFile
+import aiofiles
 import pytest
 import csv
 import os
@@ -21,7 +21,7 @@ VALUES = [dict(zip(HEADER, i)) for i in [
 
 @pytest.mark.asyncio
 async def test_dict_read():
-    async with AIOFile(FILENAME, mode="r", encoding="ascii") as afp:
+    async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
         read_rows = [i async for i in AsyncDictReader(afp, **PARAMS)]
         assert read_rows == VALUES
 
@@ -34,7 +34,7 @@ async def test_dict_write():
 
     try:
         # Write rows
-        async with AIOFile(target_name, mode="w", encoding="ascii") as afp:
+        async with aiofiles.open(target_name, mode="w", encoding="ascii", newline="") as afp:
             writer = AsyncDictWriter(afp, HEADER, **PARAMS)
             await writer.writeheader()
             await writer.writerow(VALUES[0])
