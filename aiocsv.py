@@ -1,5 +1,6 @@
 from aiofile import AIOFile, LineReader, Writer
-from typing import Sequence, List, Dict, Iterable, Mapping, Any
+from typing import Protocol, Sequence, List, Dict, Iterable, Mapping, Any, Union, Tuple
+import aiofiles
 import asyncio
 import csv
 import io
@@ -16,6 +17,39 @@ __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115,
 __copyright__ = "© Copyright 2020 Mikołaj Kuranowski"
 __license__ = "MIT"
 
+READ_SIZE = 1024
+
+
+class _WithAsyncRead(Protocol):
+    async def read(self, size: int) -> Union[str, bytes]:
+        ...
+
+
+class _WithAsyncWrite(Protocol):
+    async def write(self, b: str):
+        ...
+
+
+async def _read_until(buff: _WithAsyncRead, stop_char: str, leftovers: str = "") \
+        -> Tuple[str, str]:
+    value = leftovers
+    while stop_char not in value:
+        new_char = await buff.read(READ_SIZE)
+
+        if not isinstance(new_char, str):
+            raise TypeError("provided file was not opened in text mode")
+
+        if not new_char:
+            break
+
+        value += new_char
+
+    split = value.split(stop_char)
+    if len(split) <= 1:
+        return value, ""
+    else:
+        return split[0] + stop_char, stop_char.join(split[1:])
+
 
 class AsyncReader:
     """An object that iterates over lines in given aiofile.
@@ -23,16 +57,15 @@ class AsyncReader:
 
     Iterating over this object returns parsed rows (List[str]).
     """
-    def __init__(self, aiofile: AIOFile, **csvreaderparams) -> None:
-        if aiofile.mode.binary:
-            raise ValueError("csv file should be opened in text mode")
-
+    def __init__(self, asyncfile: _WithAsyncRead, **csvreaderparams) -> None:
         self._buffer = io.StringIO(newline="")
+        self._read_leftovers = ""
+
         self._csv_reader = csv.reader(self._buffer, **csvreaderparams)
+        self._file = asyncfile
 
         # Guess the line terminator
-        line_sep = self._csv_reader.dialect.lineterminator or "\r\n"
-        self._line_reader = LineReader(aiofile, line_sep=line_sep)
+        self._line_sep = self._csv_reader.dialect.lineterminator or "\n"
 
     @property
     def dialect(self) -> csv.Dialect:
@@ -46,8 +79,8 @@ class AsyncReader:
         return self
 
     async def __anext__(self) -> List[str]:
-        # __init__ checked if provided file is opened in text mode
-        line: str = await self._line_reader.readline()  # type: ignore
+        line, self._read_leftovers = await _read_until(self._file, self._line_sep,
+                                                       self._read_leftovers)
 
         if not line:
             raise StopAsyncIteration
@@ -79,16 +112,15 @@ class AsyncDictReader:
 
     Iterating over this object returns parsed rows (Dict[str, str]).
     """
-    def __init__(self, aiofile: AIOFile, **csvdictreaderparams) -> None:
-        if aiofile.mode.binary:
-            raise ValueError("csv file should be opened in text mode")
-
+    def __init__(self, asyncfile: _WithAsyncRead, **csvdictreaderparams) -> None:
         self._buffer = io.StringIO(newline="")
+        self._read_leftovers = ""
+
         self._csv_reader = csv.DictReader(self._buffer, **csvdictreaderparams)
+        self._file = asyncfile
 
         # Guess the line terminator
-        line_sep = self._csv_reader.reader.dialect.lineterminator or "\r\n"
-        self._line_reader = LineReader(aiofile, line_sep=line_sep)
+        self._line_sep = self._csv_reader.reader.dialect.lineterminator or "\n"
 
     @property
     def dialect(self) -> csv.Dialect:
@@ -104,11 +136,12 @@ class AsyncDictReader:
     async def __anext__(self) -> Dict[str, str]:
         # check if header needs to be parsed
         if self._csv_reader._fieldnames is None:  # type: ignore
-            header_line: str = await self._line_reader.readline()  # type: ignore
+            header_line, self._read_leftovers = await _read_until(self._file, self._line_sep,
+                                                                  self._read_leftovers)
             self._buffer.write(header_line)
 
-        # __init__ checked if provided file is opened in text mode
-        line: str = await self._line_reader.readline()  # type: ignore
+        line, self._read_leftovers = await _read_until(self._file, self._line_sep,
+                                                       self._read_leftovers)
 
         if not line:
             raise StopAsyncIteration
@@ -137,14 +170,10 @@ class AsyncWriter:
 
     Additional keyword arguments are passed to the underlying csv.writer instance.
     """
-    def __init__(self, aiofile: AIOFile, **csvwriterparams) -> None:
-        if aiofile.mode.binary:
-            raise ValueError("csv file should be opened in text mode")
-
-        self._afp = aiofile
+    def __init__(self, asyncfile: _WithAsyncWrite, **csvwriterparams) -> None:
+        self._file = asyncfile
         self._buffer = io.StringIO(newline="")
         self._csv_writer = csv.writer(self._buffer, **csvwriterparams)
-        self._file_writer = Writer(self._afp)
 
     @property
     def dialect(self) -> csv.Dialect:
@@ -154,8 +183,7 @@ class AsyncWriter:
         """Writes the current value of self._buffer to the actual target file.
         """
         # Write buffer value to the AIOFile
-        await self._file_writer(self._buffer.getvalue())
-        await self._afp.fsync()
+        await self._file.write(self._buffer.getvalue())
 
         # Clear buffer
         self._buffer.seek(0)
@@ -187,14 +215,11 @@ class AsyncDictWriter:
 
     Additional keyword arguments are passed to the underlying csv.DictWriter instance.
     """
-    def __init__(self, aiofile: AIOFile, fieldnames: Sequence[str], **csvdictwriterparams) -> None:
-        if aiofile.mode.binary:
-            raise ValueError("csv file should be opened in text mode")
-
-        self._afp = aiofile
+    def __init__(self, asyncfile: _WithAsyncWrite, fieldnames: Sequence[str],
+                 **csvdictwriterparams) -> None:
+        self._file = asyncfile
         self._buffer = io.StringIO(newline="")
         self._csv_writer = csv.DictWriter(self._buffer, fieldnames, **csvdictwriterparams)
-        self._file_writer = Writer(self._afp)
 
     @property
     def dialect(self) -> csv.Dialect:
@@ -203,8 +228,7 @@ class AsyncDictWriter:
     async def _rewrite_buffer(self) -> None:
         """Writes the current value of self._buffer to the actual target file."""
         # Write buffer value to the AIOFile
-        await self._file_writer(self._buffer.getvalue())
-        await self._afp.fsync()
+        await self._file.write(self._buffer.getvalue())
 
         # Clear buffer
         self._buffer.seek(0)
