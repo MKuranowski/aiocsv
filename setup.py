@@ -1,25 +1,19 @@
 from setuptools import setup
-import logging
-import os
 
 # new release walkthrough:
 # python3 -m pytest
 # bump __version__
-# python3 setup.py sdist
+# python3 setup.py sdist bdist_wheel
 # python3 -m twine upload dist/*filename*
 
-if os.path.exists("readme,md"):
-    with open("readme.md", "r", encoding="utf-8") as f:
-        readme = f.read()
-else:
-    logging.warn("no readme found!")
-    readme = ""
+with open("readme.md", "r", encoding="utf-8") as f:
+    readme = f.read()
 
 setup(
     name="aiocsv",
     py_modules=["aiocsv"],
     license="MIT",
-    version="1.0.1",
+    version="1.0.2",
     description="Asynchronous CSV reading/writing",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -35,4 +29,5 @@ setup(
         "Framework :: AsyncIO",
         "Programming Language :: Python :: 3 :: Only"
     ],
+    data_files=["readme.md", "license.md"]
 )
