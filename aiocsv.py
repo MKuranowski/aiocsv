@@ -31,6 +31,10 @@ class _WithAsyncWrite(Protocol):
 
 async def _read_until(buff: _WithAsyncRead, stop_char: str, leftovers: str = "") \
         -> Tuple[str, str]:
+    """Reads the async stream until stop_char.
+    Returns a tuple of text until `stop_char`, and whatever was leftover if too much was read.
+
+    The first item is empty, assume end of buffer was reached."""
     value = leftovers
     while stop_char not in value:
         new_char = await buff.read(READ_SIZE)
@@ -51,10 +55,10 @@ async def _read_until(buff: _WithAsyncRead, stop_char: str, leftovers: str = "")
 
 
 class AsyncReader:
-    """An object that iterates over lines in given aiofile.
+    """An object that iterates over lines in given asynchronous file.
     Additional keyword arguments are passed to the underlying csv.reader instance.
 
-    Iterating over this object returns parsed rows (List[str]).
+    Iterating over this object returns parsed CSV rows (List[str]).
     """
     def __init__(self, asyncfile: _WithAsyncRead, **csvreaderparams) -> None:
         self._buffer = io.StringIO(newline="")
@@ -103,13 +107,13 @@ class AsyncReader:
 
 
 class AsyncDictReader:
-    """An object that iterates over lines in given aiofile.
+    """An object that iterates over lines in given asynchronous file.
     Additional keyword arguments are passed to the underlying csv.DictReader instance.
 
     If given csv file has no header, provide a 'fieldnames' keyword argument,
     like you would to csv.DictReader.
 
-    Iterating over this object returns parsed rows (Dict[str, str]).
+    Iterating over this object returns parsed CSV rows (Dict[str, str]).
     """
     def __init__(self, asyncfile: _WithAsyncRead, **csvdictreaderparams) -> None:
         self._buffer = io.StringIO(newline="")
@@ -164,7 +168,7 @@ class AsyncDictReader:
 
 
 class AsyncWriter:
-    """An object that writes csv rows to the given aiofile.
+    """An object that writes csv rows to the given asynchronous file.
     In this object "row" is a sequence of values.
 
     Additional keyword arguments are passed to the underlying csv.writer instance.
@@ -181,7 +185,7 @@ class AsyncWriter:
     async def _rewrite_buffer(self) -> None:
         """Writes the current value of self._buffer to the actual target file.
         """
-        # Write buffer value to the AIOFile
+        # Write buffer value to the file
         await self._file.write(self._buffer.getvalue())
 
         # Clear buffer
@@ -209,7 +213,7 @@ class AsyncWriter:
 
 
 class AsyncDictWriter:
-    """An object that writes csv rows to the given aiofile.
+    """An object that writes csv rows to the given asynchronous file.
     In this object "row" is a mapping from fieldnames to values.
 
     Additional keyword arguments are passed to the underlying csv.DictWriter instance.
@@ -226,7 +230,7 @@ class AsyncDictWriter:
 
     async def _rewrite_buffer(self) -> None:
         """Writes the current value of self._buffer to the actual target file."""
-        # Write buffer value to the AIOFile
+        # Write buffer value to the file
         await self._file.write(self._buffer.getvalue())
 
         # Clear buffer
