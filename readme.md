@@ -5,6 +5,7 @@ Asynchronous CSV reading and writing.
 
 ## Installation
 
+Python 3.8+ is required.  
 `pip3 install aiocsv`
 
 
