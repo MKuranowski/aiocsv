@@ -1,7 +1,4 @@
-from aiofile import AIOFile, LineReader, Writer
 from typing import Protocol, Sequence, List, Dict, Iterable, Mapping, Any, Union, Tuple
-import aiofiles
-import asyncio
 import csv
 import io
 
@@ -17,7 +14,9 @@ __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115,
 __copyright__ = "© Copyright 2020 Mikołaj Kuranowski"
 __license__ = "MIT"
 
-READ_SIZE = 1024
+
+# Amout of bytes to be read when consuming streams in Reader instances
+READ_SIZE: int = 1024
 
 
 class _WithAsyncRead(Protocol):
