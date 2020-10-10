@@ -10,7 +10,7 @@ except ImportError:
 
 __title__ = "aiocsv"
 __description__ = "Asynchronous CSV reading/writing"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 __url__ = "https://github.com/MKuranowski/aiocsv"
 __author__ = "Mikołaj Kuranowski"
