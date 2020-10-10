@@ -1,6 +1,12 @@
-from typing import Protocol, Sequence, List, Dict, Iterable, Mapping, Any, Union, Tuple
+from typing import Sequence, List, Dict, Iterable, Mapping, Any, Union, Tuple
 import csv
 import io
+
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol
+
 
 __title__ = "aiocsv"
 __description__ = "Asynchronous CSV reading/writing"
