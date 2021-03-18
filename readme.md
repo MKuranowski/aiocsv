@@ -50,7 +50,7 @@ async def main():
             print(row)  # row is a dict
 
     # simple writing, "unix"-dialect
-    async with aiofiles.open("new_file.csv", mode="r", encoding="utf-8", newline="") as afp:
+    async with aiofiles.open("new_file.csv", mode="w", encoding="utf-8", newline="") as afp:
         writer = AsyncWriter(afp, dialect="unix")
         await writer.writerow(["name", "age"])
         await writer.writerows([
@@ -58,7 +58,7 @@ async def main():
         ])
 
     # dict writing, all quoted, "NULL" for missing fields
-    async with aiofiles.open("new_file2.csv", mode="r", encoding="utf-8", newline="") as afp:
+    async with aiofiles.open("new_file2.csv", mode="w", encoding="utf-8", newline="") as afp:
         writer = AsyncDictWriter(afp, ["name", "age"], restval="NULL", quoting=csv.QUOTE_ALL)
         await writer.writeheader()
         await writer.writerow({"name": "John", "age": 26})
