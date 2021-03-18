@@ -11,7 +11,13 @@ Python 3.6+ is required.
 
 ## Usage
 
-Always open files in text mode and with `newline=""`, otherwise bad things happen.
+All aiocsv classes behave (almost, see below) like their synchronous counterparts from the [csv module](https://docs.python.org/3/library/csv.html) -
+after all aiocsv is only a wrapper around the synchronous objects.
+
+The only different behavior is in newline handling. Since aiocsv buffers files row-by-row,
+underlaying streams **must** be opened with `newline=""` and **must** use the same line terminators
+as defined by [Dialect.lineterminator (default: CRLF)](https://docs.python.org/3/library/csv.html#csv.Dialect.lineterminator).
+The built-in csv mosule usually handles mismatched newlies ok-ish, whereas aiocsv will most likely break. 
 
 AsyncReader & AsyncDictReader accept any object that has a `read(size: int)` coroutine,
 which should return a string.
