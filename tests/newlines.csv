@@ -1,0 +1,7 @@
+field1,field2,field3
+"hello","is it $"me""","you're
+looking for"
+this is going to be,another$
+broken row,"this time with escapechar"
+"and now it's both quoted$
+and",with,"escape char"
