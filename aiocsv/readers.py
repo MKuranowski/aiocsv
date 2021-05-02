@@ -4,8 +4,6 @@ from typing import Dict, List, Optional, Sequence
 from .parser import _WithAsyncRead
 
 try:
-    import pyximport
-    pyximport.install()
     from ._parser import parser
 except ImportError:
     warn("Using a slow, pure-python CSV parser")

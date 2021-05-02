@@ -1,4 +1,6 @@
-from setuptools import setup
+from setuptools import setup, find_packages
+from setuptools.extension import Extension
+from os import getenv
 
 # new release walkthrough:
 # python3 -m pytest
@@ -6,12 +8,26 @@ from setuptools import setup
 # python3 setup.py sdist bdist_wheel
 # python3 -m twine upload dist/*filename*
 
+if getenv("CYTHONIZE"):
+    from Cython.Build import cythonize
+    extensions = cythonize("aiocsv/_parser.pyx")
+
+else:
+    extensions = [Extension(
+        name="aiocsv._parser",
+        sources=["aiocsv/_parser.c"]
+    )]
+
+
 with open("readme.md", "r", encoding="utf-8") as f:
     readme = f.read()
 
 setup(
     name="aiocsv",
     py_modules=["aiocsv"],
+    ext_modules=extensions,
+    packages=find_packages(include=["aiocsv"]),
+    zip_safe=False,
     license="MIT",
     version="1.2.0a1",
     description="Asynchronous CSV reading/writing",
@@ -23,12 +39,10 @@ setup(
     url="https://github.com/MKuranowski/aiocsv",
     keywords="async asynchronous aiofiles csv tsv",
     python_requires=">=3.6, <4",
-    install_requires=["typing-extensions;python_version<='3.7'"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: MIT License",
         "Framework :: AsyncIO",
         "Programming Language :: Python :: 3 :: Only"
-    ],
-    data_files=["readme.md", "license.md"]
+    ]
 )
