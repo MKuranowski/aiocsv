@@ -1,38 +1,15 @@
 import csv
-import io
-from typing import Dict, List, Protocol, Tuple, Union
+from warnings import warn
+from typing import Dict, List, Optional, Sequence
+from .parser import _WithAsyncRead
 
-
-# Amout of bytes to be read when consuming streams in Reader instances
-READ_SIZE: int = 1024
-
-
-class _WithAsyncRead(Protocol):
-    async def read(self, __size: int) -> Union[str, bytes]: ...
-
-
-async def _read_until(buff: _WithAsyncRead, stop_char: str, leftovers: str = "") \
-        -> Tuple[str, str]:
-    """Reads the async stream until stop_char.
-    Returns a tuple of text until `stop_char`, and whatever was leftover if too much was read.
-    The first item is empty, assume end of buffer was reached."""
-    value = leftovers
-    while stop_char not in value:
-        new_char = await buff.read(READ_SIZE)
-
-        if not isinstance(new_char, str):
-            raise TypeError("provided file was not opened in text mode")
-
-        if not new_char:
-            break
-
-        value += new_char
-
-    split = value.split(stop_char)
-    if len(split) <= 1:
-        return value, ""
-    else:
-        return split[0] + stop_char, stop_char.join(split[1:])
+try:
+    import pyximport
+    pyximport.install()
+    from ._parser import parser
+except ImportError:
+    warn("Using a slow, pure-python CSV parser")
+    from .parser import parser
 
 
 class AsyncReader:
@@ -41,49 +18,25 @@ class AsyncReader:
     Iterating over this object returns parsed CSV rows (List[str]).
     """
     def __init__(self, asyncfile: _WithAsyncRead, **csvreaderparams) -> None:
-        self._buffer = io.StringIO(newline="")
-        self._read_leftovers = ""
-
-        self._csv_reader = csv.reader(self._buffer, **csvreaderparams)
         self._file = asyncfile
 
-        # Guess the line terminator
-        self._line_sep = self._csv_reader.dialect.lineterminator or "\n"
+        # csv.Dialect isn't a class, instead it's a weird proxy
+        # (at least in CPython) to _csv.Dialect. Instead of figuring how
+        # this shit works, just let `csv` figure the dialects out.
+        self.dialect = csv.reader("", **csvreaderparams).dialect
 
-    @property
-    def dialect(self) -> csv.Dialect:
-        return self._csv_reader.dialect
+        self._parser = parser(self._file, self.dialect)
 
     @property
     def line_num(self) -> int:
-        return self._csv_reader.line_num
+        warn("aiocsv doesn't supper the line_num attribute on readers")
+        return -1
 
     def __aiter__(self):
         return self
 
     async def __anext__(self) -> List[str]:
-        line, self._read_leftovers = await _read_until(self._file, self._line_sep,
-                                                       self._read_leftovers)
-
-        if not line:
-            raise StopAsyncIteration
-
-        # Try to parse line
-        self._buffer.write(line)
-        self._buffer.seek(0)
-
-        # Get parsed line from the underlying csv.reader instance
-        try:
-            result = next(self._csv_reader)
-        except StopIteration as e:
-            raise StopAsyncIteration from e
-
-        # Clear the buffer
-        self._buffer.seek(0)
-        self._buffer.truncate(0)
-
-        # Return parsed row
-        return result
+        return await self._parser.__anext__()
 
 
 class AsyncDictReader:
@@ -93,53 +46,47 @@ class AsyncDictReader:
     like you would to csv.DictReader.
     Iterating over this object returns parsed CSV rows (Dict[str, str]).
     """
-    def __init__(self, asyncfile: _WithAsyncRead, **csvdictreaderparams) -> None:
-        self._buffer = io.StringIO(newline="")
-        self._read_leftovers = ""
+    def __init__(self, asyncfile: _WithAsyncRead, fieldnames: Optional[Sequence[str]] = None,
+                 restkey: Optional[str] = None, restval: Optional[str] = None,
+                 **csvreaderparams) -> None:
 
-        self._csv_reader = csv.DictReader(self._buffer, **csvdictreaderparams)
-        self._file = asyncfile
-
-        # Guess the line terminator
-        self._line_sep = self._csv_reader.reader.dialect.lineterminator or "\n"
+        self.fieldnames: Optional[List[str]] = list(fieldnames) if fieldnames else None
+        self.restkey: Optional[str] = restkey
+        self.restval: Optional[str] = restval
+        self.reader = AsyncReader(asyncfile, **csvreaderparams)
 
     @property
     def dialect(self) -> csv.Dialect:
-        return self._csv_reader.reader.dialect
+        return self.reader.dialect
 
     @property
     def line_num(self) -> int:
-        return self._csv_reader.reader.line_num
+        return self.reader.line_num
 
     def __aiter__(self):
         return self
 
     async def __anext__(self) -> Dict[str, str]:
         # check if header needs to be parsed
-        if self._csv_reader._fieldnames is None:  # type: ignore
-            header_line, self._read_leftovers = await _read_until(self._file, self._line_sep,
-                                                                  self._read_leftovers)
-            self._buffer.write(header_line)
+        if self.fieldnames is None:
+            self.fieldnames = await self.reader.__anext__()
 
-        line, self._read_leftovers = await _read_until(self._file, self._line_sep,
-                                                       self._read_leftovers)
+        # skip empty rows
+        cells = await self.reader.__anext__()
+        while not cells:
+            cells = await self.reader.__anext__()
 
-        if not line:
-            raise StopAsyncIteration
+        # join the header with the row
+        row = dict(zip(self.fieldnames, cells))
 
-        # Try to parse line
-        self._buffer.write(line)
-        self._buffer.seek(0)
+        len_header = len(self.fieldnames)
+        len_cells = len(cells)
 
-        # Get parsed line from the underlying csv.reader instance
-        try:
-            result = next(self._csv_reader)
-        except StopIteration as e:
-            raise StopAsyncIteration from e
+        if len_cells > len_header:
+            row[self.restkey] = cells[len_header:]  # type: ignore
 
-        # Clear the buffer
-        self._buffer.seek(0)
-        self._buffer.truncate(0)
+        elif len_cells < len_header:
+            for k in self.fieldnames[len_cells:]:
+                row[k] = self.restval  # type: ignore
 
-        # Return parsed row
-        return result
+        return row
