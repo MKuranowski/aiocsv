@@ -1,6 +1,10 @@
 __pycache__
 .vscode
+.venv
 .pytest_cache
 *.egg-info
 build
 dist
+ignore_*
+_aiocsv.*
+!_aiocsv.pyx
