@@ -13,7 +13,7 @@ setup(
     name="aiocsv",
     py_modules=["aiocsv"],
     license="MIT",
-    version="1.1.1",
+    version="1.2.0a1",
     description="Asynchronous CSV reading/writing",
     long_description=readme,
     long_description_content_type="text/markdown",
