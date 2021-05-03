@@ -10,7 +10,7 @@ from os import getenv
 
 if getenv("CYTHONIZE"):
     from Cython.Build import cythonize
-    extensions = cythonize("aiocsv/_parser.pyx")
+    extensions = cythonize("aiocsv/_parser.pyx", language_level=3)
 
 else:
     extensions = [Extension(
@@ -38,6 +38,7 @@ setup(
                                           64, 103, 109, 97, 105, 108, 46, 99, 111, 109]),
     url="https://github.com/MKuranowski/aiocsv",
     keywords="async asynchronous aiofiles csv tsv",
+    install_requires="typing-extensions;python_version<='3.7'",
     python_requires=">=3.6, <4",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
