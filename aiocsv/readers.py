@@ -1,7 +1,7 @@
 import csv
 from warnings import warn
 from typing import Dict, List, Optional, Sequence
-from .parser import _WithAsyncRead
+from .protocols import WithAsyncRead
 
 try:
     from ._parser import parser
@@ -15,7 +15,7 @@ class AsyncReader:
     Additional keyword arguments are passed to the underlying csv.reader instance.
     Iterating over this object returns parsed CSV rows (List[str]).
     """
-    def __init__(self, asyncfile: _WithAsyncRead, **csvreaderparams) -> None:
+    def __init__(self, asyncfile: WithAsyncRead, **csvreaderparams) -> None:
         self._file = asyncfile
 
         # csv.Dialect isn't a class, instead it's a weird proxy
@@ -44,7 +44,7 @@ class AsyncDictReader:
     like you would to csv.DictReader.
     Iterating over this object returns parsed CSV rows (Dict[str, str]).
     """
-    def __init__(self, asyncfile: _WithAsyncRead, fieldnames: Optional[Sequence[str]] = None,
+    def __init__(self, asyncfile: WithAsyncRead, fieldnames: Optional[Sequence[str]] = None,
                  restkey: Optional[str] = None, restval: Optional[str] = None,
                  **csvreaderparams) -> None:
 

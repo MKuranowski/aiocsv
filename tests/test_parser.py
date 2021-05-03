@@ -5,16 +5,16 @@ import io
 
 from aiocsv._parser import parser as fast_parser
 from aiocsv.parser import parser as py_parser
-from aiocsv.parser import _WithAsyncRead
+from aiocsv.protocols import WithAsyncRead
 
-Parser = Callable[[_WithAsyncRead, csv.Dialect], AsyncIterator[List[str]]]
+Parser = Callable[[WithAsyncRead, csv.Dialect], AsyncIterator[List[str]]]
 
 PARSERS: List[Parser] = [fast_parser, py_parser]
 PARSER_NAMES: List[str] = ["fast_cython_parser", "pure_python_parser"]
 
 
 class AsyncStringIO:
-    """Simple wrapper to fulfill _WithAsyncRead around a string"""
+    """Simple wrapper to fulfill WithAsyncRead around a string"""
     def __init__(self, data: str = "") -> None:
         self.ptr = 0
         self.data = data

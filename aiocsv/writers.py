@@ -1,10 +1,8 @@
 import csv
 import io
-from typing import Any, Iterable, Mapping, Protocol, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
-
-class _WithAsyncWrite(Protocol):
-    async def write(self, __b: str) -> Any: ...
+from .protocols import WithAsyncWrite
 
 
 class AsyncWriter:
@@ -13,7 +11,7 @@ class AsyncWriter:
 
     Additional keyword arguments are passed to the underlying csv.writer instance.
     """
-    def __init__(self, asyncfile: _WithAsyncWrite, **csvwriterparams) -> None:
+    def __init__(self, asyncfile: WithAsyncWrite, **csvwriterparams) -> None:
         self._file = asyncfile
         self._buffer = io.StringIO(newline="")
         self._csv_writer = csv.writer(self._buffer, **csvwriterparams)
@@ -58,7 +56,7 @@ class AsyncDictWriter:
 
     Additional keyword arguments are passed to the underlying csv.DictWriter instance.
     """
-    def __init__(self, asyncfile: _WithAsyncWrite, fieldnames: Sequence[str],
+    def __init__(self, asyncfile: WithAsyncWrite, fieldnames: Sequence[str],
                  **csvdictwriterparams) -> None:
         self._file = asyncfile
         self._buffer = io.StringIO(newline="")

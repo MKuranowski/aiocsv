@@ -1,13 +1,11 @@
 import enum
 import csv
-from typing import AsyncIterator, List, Protocol, Union
+from typing import AsyncIterator, List
 
-READ_SIZE: int = 2048
-
+from .protocols import WithAsyncRead
 
 # Amout of bytes to be read when consuming streams in Reader instances
-class _WithAsyncRead(Protocol):
-    async def read(self, __size: int) -> Union[str, bytes]: ...
+READ_SIZE: int = 2048
 
 
 class ParserState(enum.Enum):
@@ -21,7 +19,7 @@ class ParserState(enum.Enum):
     EAT_NEWLINE = enum.auto()
 
 
-async def parser(reader: _WithAsyncRead, dialect: csv.Dialect) -> AsyncIterator[List[str]]:
+async def parser(reader: WithAsyncRead, dialect: csv.Dialect) -> AsyncIterator[List[str]]:
     state: ParserState = ParserState.AFTER_DELIM
 
     data = await reader.read(READ_SIZE)
