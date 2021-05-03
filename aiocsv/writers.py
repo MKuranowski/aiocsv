@@ -4,7 +4,7 @@ from typing import Any, Iterable, Mapping, Protocol, Sequence
 
 
 class _WithAsyncWrite(Protocol):
-    async def write(self, __b: str): ...
+    async def write(self, __b: str) -> Any: ...
 
 
 class AsyncWriter:
