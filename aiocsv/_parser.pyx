@@ -64,6 +64,8 @@ async def parser(reader, pydialect):
 
     cdef list row = []
     cdef unicode cell = u""
+    cdef bint force_save_cell = False
+    cdef bint numeric_cell = False
     cdef Py_UCS4 char
 
     # Iterate while the reader gives out data
@@ -92,18 +94,19 @@ async def parser(reader, pydialect):
 
                 # 1. We were asked to skip whitespace right after the delimiter
                 if dialect.skipinitialspace and char == u' ':
-                    pass
+                    force_save_cell = True
 
                 # 2. Empty field + End of row
                 elif char == u'\r' or char == u'\n':
-                    if len(row) > 0:
+                    if len(row) > 0 or force_save_cell:
                         row.append(cell)
-                    state = ParserState.AFTER_ROW
+                    state = ParserState.EAT_NEWLINE
 
                 # 3. Empty field
                 elif char == dialect.delimiter:
                     row.append(cell)
                     cell = u""
+                    force_save_cell = False
                     # state stays unchanged (AFTER_DELIM)
 
                 # 4. Start of a quoted cell
@@ -118,28 +121,27 @@ async def parser(reader, pydialect):
                 else:
                     cell += char
                     state = ParserState.IN_CELL
+                    numeric_cell = dialect.quoting == ReadQuoting.NONNUMERIC
 
             elif state == ParserState.IN_CELL:
                 # -- Inside an unqouted cell --
 
                 # 1. End of a row
                 if char == u'\r' or char == u'\n':
-                    row.append(
-                        float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
-                        else cell
-                    )
+                    row.append(float(cell) if numeric_cell else cell)
 
                     cell = u""
+                    force_save_cell = False
+                    numeric_cell = False
                     state = ParserState.EAT_NEWLINE
 
                 # 2. End of a cell
                 elif char == dialect.delimiter:
-                    row.append(
-                        float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
-                        else cell
-                    )
+                    row.append(float(cell) if numeric_cell else cell)  # type: ignore
 
                     cell = u""
+                    force_save_cell = False
+                    numeric_cell = False
                     state = ParserState.AFTER_DELIM
 
                 # 3. Start of an espace
@@ -162,9 +164,9 @@ async def parser(reader, pydialect):
                     state = ParserState.ESCAPE_QUOTED
 
                 # 2. Quotechar
-                elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:
-                    state = ParserState.QUOTE_IN_QUOTED if dialect.doublequote \
-                        else ParserState.IN_CELL
+                elif dialect.quoting != ReadQuoting.NONE and char == dialect.quotechar and \
+                        dialect.doublequote:
+                    state = ParserState.QUOTE_IN_QUOTED
 
                 # 3. Every other char
                 else:
@@ -187,12 +189,14 @@ async def parser(reader, pydialect):
                 elif char == u'\r' or char == u'\n':
                     row.append(cell)
                     cell = u""
+                    force_save_cell = False
                     state = ParserState.EAT_NEWLINE
 
                 # 3. End of a cell
                 elif char == dialect.delimiter:
                     row.append(cell)
                     cell = u""
+                    force_save_cell = False
                     state = ParserState.AFTER_DELIM
 
                 # 4. Unescaped quotechar
@@ -211,8 +215,8 @@ async def parser(reader, pydialect):
         # Read more data
         data = <unicode?>(await reader.read(READ_SIZE))
 
-    if cell:
-        row.append(cell)
+    if cell or force_save_cell:
+        row.append(float(cell) if numeric_cell else cell)
     if row:
         yield row
 

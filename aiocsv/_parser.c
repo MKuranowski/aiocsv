@@ -23,7 +23,7 @@ END: Cython Metadata */
 #else
 #define CYTHON_ABI "0_29_23"
 #define CYTHON_HEX_VERSION 0x001D17F0
-#define CYTHON_FUTURE_DIVISION 0
+#define CYTHON_FUTURE_DIVISION 1
 #include <stddef.h>
 #ifndef offsetof
   #define offsetof(type, member) ( (size_t) & ((type*)0) -> member )
@@ -895,6 +895,8 @@ struct __pyx_obj_6aiocsv_7_parser___pyx_scope_struct__parser {
   Py_UCS4 __pyx_v_char;
   PyObject *__pyx_v_data;
   struct __pyx_t_6aiocsv_7_parser_CDialect __pyx_v_dialect;
+  int __pyx_v_force_save_cell;
+  int __pyx_v_numeric_cell;
   PyObject *__pyx_v_pydialect;
   PyObject *__pyx_v_reader;
   PyObject *__pyx_v_row;
@@ -1480,8 +1482,10 @@ static const char __pyx_k_QUOTE_NONE[] = "QUOTE_NONE";
 static const char __pyx_k_escapechar[] = "escapechar";
 static const char __pyx_k_doublequote[] = "doublequote";
 static const char __pyx_k_RuntimeError[] = "RuntimeError";
+static const char __pyx_k_numeric_cell[] = "numeric_cell";
 static const char __pyx_k_aiocsv__parser[] = "aiocsv._parser";
 static const char __pyx_k_expected_after[] = "' expected after '";
+static const char __pyx_k_force_save_cell[] = "force_save_cell";
 static const char __pyx_k_QUOTE_NONNUMERIC[] = "QUOTE_NONNUMERIC";
 static const char __pyx_k_skipinitialspace[] = "skipinitialspace";
 static const char __pyx_k_aiocsv__parser_pyx[] = "aiocsv/_parser.pyx";
@@ -1507,9 +1511,11 @@ static PyObject *__pyx_n_s_dialect;
 static PyObject *__pyx_n_s_doublequote;
 static PyObject *__pyx_n_s_escapechar;
 static PyObject *__pyx_kp_u_expected_after;
+static PyObject *__pyx_n_s_force_save_cell;
 static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_name;
+static PyObject *__pyx_n_s_numeric_cell;
 static PyObject *__pyx_n_s_parser;
 static PyObject *__pyx_n_s_pydialect;
 static PyObject *__pyx_n_s_quotechar;
@@ -1523,7 +1529,7 @@ static PyObject *__pyx_n_s_state;
 static PyObject *__pyx_n_s_strict;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_throw;
-static PyObject *__pyx_n_s_wtf;
+static PyObject *__pyx_n_u_wtf;
 static PyObject *__pyx_pf_6aiocsv_7_parser_parser(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_reader, PyObject *__pyx_v_pydialect); /* proto */
 static PyObject *__pyx_tp_new_6aiocsv_7_parser___pyx_scope_struct__parser(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_int_2048;
@@ -1929,9 +1935,8 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
   int __pyx_t_12;
   Py_ssize_t __pyx_t_13;
   int __pyx_t_14;
-  enum __pyx_t_6aiocsv_7_parser_ParserState __pyx_t_15;
-  Py_UCS4 __pyx_t_16;
-  PyObject *__pyx_t_17 = NULL;
+  Py_UCS4 __pyx_t_15;
+  PyObject *__pyx_t_16 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -1941,8 +1946,8 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
     case 0: goto __pyx_L3_first_run;
     case 1: goto __pyx_L4_resume_from_await;
     case 2: goto __pyx_L11_resume_from_yield;
-    case 3: goto __pyx_L24_resume_from_await;
-    case 4: goto __pyx_L27_resume_from_yield;
+    case 3: goto __pyx_L27_resume_from_await;
+    case 4: goto __pyx_L32_resume_from_yield;
     default: /* CPython raises the right error here */
     __Pyx_RefNannyFinishContext();
     return NULL;
@@ -2023,7 +2028,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  * 
  *     cdef list row = []             # <<<<<<<<<<<<<<
  *     cdef unicode cell = u""
- *     cdef Py_UCS4 char
+ *     cdef bint force_save_cell = False
  */
   __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -2035,14 +2040,32 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  * 
  *     cdef list row = []
  *     cdef unicode cell = u""             # <<<<<<<<<<<<<<
- *     cdef Py_UCS4 char
- * 
+ *     cdef bint force_save_cell = False
+ *     cdef bint numeric_cell = False
  */
   __Pyx_INCREF(__pyx_kp_u__2);
   __Pyx_GIVEREF(__pyx_kp_u__2);
   __pyx_cur_scope->__pyx_v_cell = __pyx_kp_u__2;
 
-  /* "aiocsv/_parser.pyx":70
+  /* "aiocsv/_parser.pyx":67
+ *     cdef list row = []
+ *     cdef unicode cell = u""
+ *     cdef bint force_save_cell = False             # <<<<<<<<<<<<<<
+ *     cdef bint numeric_cell = False
+ *     cdef Py_UCS4 char
+ */
+  __pyx_cur_scope->__pyx_v_force_save_cell = 0;
+
+  /* "aiocsv/_parser.pyx":68
+ *     cdef unicode cell = u""
+ *     cdef bint force_save_cell = False
+ *     cdef bint numeric_cell = False             # <<<<<<<<<<<<<<
+ *     cdef Py_UCS4 char
+ * 
+ */
+  __pyx_cur_scope->__pyx_v_numeric_cell = 0;
+
+  /* "aiocsv/_parser.pyx":72
  * 
  *     # Iterate while the reader gives out data
  *     while data:             # <<<<<<<<<<<<<<
@@ -2053,7 +2076,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
     __pyx_t_4 = (__pyx_cur_scope->__pyx_v_data != Py_None)&&(__Pyx_PyUnicode_IS_TRUE(__pyx_cur_scope->__pyx_v_data) != 0);
     if (!__pyx_t_4) break;
 
-    /* "aiocsv/_parser.pyx":74
+    /* "aiocsv/_parser.pyx":76
  *         # Iterate charachter-by-charachter over the input file
  *         # and update the parser state
  *         for char in data:             # <<<<<<<<<<<<<<
@@ -2062,16 +2085,16 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
     if (unlikely(__pyx_cur_scope->__pyx_v_data == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' is not iterable");
-      __PYX_ERR(0, 74, __pyx_L1_error)
+      __PYX_ERR(0, 76, __pyx_L1_error)
     }
     __Pyx_INCREF(__pyx_cur_scope->__pyx_v_data);
     __pyx_t_5 = __pyx_cur_scope->__pyx_v_data;
-    __pyx_t_10 = __Pyx_init_unicode_iteration(__pyx_t_5, (&__pyx_t_7), (&__pyx_t_8), (&__pyx_t_9)); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 74, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_init_unicode_iteration(__pyx_t_5, (&__pyx_t_7), (&__pyx_t_8), (&__pyx_t_9)); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 76, __pyx_L1_error)
     for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_7; __pyx_t_11++) {
       __pyx_t_6 = __pyx_t_11;
       __pyx_cur_scope->__pyx_v_char = __Pyx_PyUnicode_READ(__pyx_t_9, __pyx_t_8, __pyx_t_6);
 
-      /* "aiocsv/_parser.pyx":78
+      /* "aiocsv/_parser.pyx":80
  *             # Switch case depedning on the state
  * 
  *             if state == ParserState.EAT_NEWLINE:             # <<<<<<<<<<<<<<
@@ -2081,7 +2104,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
       __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_state == __pyx_e_6aiocsv_7_parser_EAT_NEWLINE) != 0);
       if (__pyx_t_4) {
 
-        /* "aiocsv/_parser.pyx":79
+        /* "aiocsv/_parser.pyx":81
  * 
  *             if state == ParserState.EAT_NEWLINE:
  *                 if char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
@@ -2092,7 +2115,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           case 13:
           case 10:
 
-          /* "aiocsv/_parser.pyx":80
+          /* "aiocsv/_parser.pyx":82
  *             if state == ParserState.EAT_NEWLINE:
  *                 if char == u'\r' or char == u'\n':
  *                     continue             # <<<<<<<<<<<<<<
@@ -2101,7 +2124,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           goto __pyx_L7_continue;
 
-          /* "aiocsv/_parser.pyx":79
+          /* "aiocsv/_parser.pyx":81
  * 
  *             if state == ParserState.EAT_NEWLINE:
  *                 if char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
@@ -2112,7 +2135,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           default: break;
         }
 
-        /* "aiocsv/_parser.pyx":81
+        /* "aiocsv/_parser.pyx":83
  *                 if char == u'\r' or char == u'\n':
  *                     continue
  *                 state = ParserState.AFTER_ROW             # <<<<<<<<<<<<<<
@@ -2121,7 +2144,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
         __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_AFTER_ROW;
 
-        /* "aiocsv/_parser.pyx":78
+        /* "aiocsv/_parser.pyx":80
  *             # Switch case depedning on the state
  * 
  *             if state == ParserState.EAT_NEWLINE:             # <<<<<<<<<<<<<<
@@ -2130,7 +2153,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
       }
 
-      /* "aiocsv/_parser.pyx":84
+      /* "aiocsv/_parser.pyx":86
  *             # (fallthrough)
  * 
  *             if state == ParserState.AFTER_ROW:             # <<<<<<<<<<<<<<
@@ -2140,7 +2163,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
       __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_state == __pyx_e_6aiocsv_7_parser_AFTER_ROW) != 0);
       if (__pyx_t_4) {
 
-        /* "aiocsv/_parser.pyx":85
+        /* "aiocsv/_parser.pyx":87
  * 
  *             if state == ParserState.AFTER_ROW:
  *                 yield row             # <<<<<<<<<<<<<<
@@ -2171,23 +2194,23 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_8 = __pyx_cur_scope->__pyx_t_3;
         __pyx_t_9 = __pyx_cur_scope->__pyx_t_4;
         __pyx_t_11 = __pyx_cur_scope->__pyx_t_5;
-        if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 85, __pyx_L1_error)
+        if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 87, __pyx_L1_error)
 
-        /* "aiocsv/_parser.pyx":86
+        /* "aiocsv/_parser.pyx":88
  *             if state == ParserState.AFTER_ROW:
  *                 yield row
  *                 row = []             # <<<<<<<<<<<<<<
  *                 state = ParserState.AFTER_DELIM
  * 
  */
-        __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 86, __pyx_L1_error)
+        __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_row);
         __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_row, ((PyObject*)__pyx_t_2));
         __Pyx_GIVEREF(__pyx_t_2);
         __pyx_t_2 = 0;
 
-        /* "aiocsv/_parser.pyx":87
+        /* "aiocsv/_parser.pyx":89
  *                 yield row
  *                 row = []
  *                 state = ParserState.AFTER_DELIM             # <<<<<<<<<<<<<<
@@ -2196,7 +2219,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
         __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_AFTER_DELIM;
 
-        /* "aiocsv/_parser.pyx":84
+        /* "aiocsv/_parser.pyx":86
  *             # (fallthrough)
  * 
  *             if state == ParserState.AFTER_ROW:             # <<<<<<<<<<<<<<
@@ -2205,7 +2228,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
       }
 
-      /* "aiocsv/_parser.pyx":90
+      /* "aiocsv/_parser.pyx":92
  * 
  *             # (fallthrough)
  *             if state == ParserState.AFTER_DELIM:             # <<<<<<<<<<<<<<
@@ -2215,11 +2238,11 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
       switch (__pyx_cur_scope->__pyx_v_state) {
         case __pyx_e_6aiocsv_7_parser_AFTER_DELIM:
 
-        /* "aiocsv/_parser.pyx":94
+        /* "aiocsv/_parser.pyx":96
  * 
  *                 # 1. We were asked to skip whitespace right after the delimiter
  *                 if dialect.skipinitialspace and char == u' ':             # <<<<<<<<<<<<<<
- *                     pass
+ *                     force_save_cell = True
  * 
  */
         __pyx_t_12 = (__pyx_cur_scope->__pyx_v_dialect.skipinitialspace != 0);
@@ -2232,14 +2255,31 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = __pyx_t_12;
         __pyx_L13_bool_binop_done:;
         if (__pyx_t_4) {
+
+          /* "aiocsv/_parser.pyx":97
+ *                 # 1. We were asked to skip whitespace right after the delimiter
+ *                 if dialect.skipinitialspace and char == u' ':
+ *                     force_save_cell = True             # <<<<<<<<<<<<<<
+ * 
+ *                 # 2. Empty field + End of row
+ */
+          __pyx_cur_scope->__pyx_v_force_save_cell = 1;
+
+          /* "aiocsv/_parser.pyx":96
+ * 
+ *                 # 1. We were asked to skip whitespace right after the delimiter
+ *                 if dialect.skipinitialspace and char == u' ':             # <<<<<<<<<<<<<<
+ *                     force_save_cell = True
+ * 
+ */
           goto __pyx_L12;
         }
 
-        /* "aiocsv/_parser.pyx":98
+        /* "aiocsv/_parser.pyx":100
  * 
  *                 # 2. Empty field + End of row
  *                 elif char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
- *                     if len(row) > 0:
+ *                     if len(row) > 0 or force_save_cell:
  *                         row.append(cell)
  */
         switch (__pyx_cur_scope->__pyx_v_char) {
@@ -2253,55 +2293,63 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         }
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":99
+          /* "aiocsv/_parser.pyx":101
  *                 # 2. Empty field + End of row
  *                 elif char == u'\r' or char == u'\n':
- *                     if len(row) > 0:             # <<<<<<<<<<<<<<
+ *                     if len(row) > 0 or force_save_cell:             # <<<<<<<<<<<<<<
  *                         row.append(cell)
- *                     state = ParserState.AFTER_ROW
+ *                     state = ParserState.EAT_NEWLINE
  */
-          __pyx_t_13 = PyList_GET_SIZE(__pyx_cur_scope->__pyx_v_row); if (unlikely(__pyx_t_13 == ((Py_ssize_t)-1))) __PYX_ERR(0, 99, __pyx_L1_error)
-          __pyx_t_4 = ((__pyx_t_13 > 0) != 0);
+          __pyx_t_13 = PyList_GET_SIZE(__pyx_cur_scope->__pyx_v_row); if (unlikely(__pyx_t_13 == ((Py_ssize_t)-1))) __PYX_ERR(0, 101, __pyx_L1_error)
+          __pyx_t_12 = ((__pyx_t_13 > 0) != 0);
+          if (!__pyx_t_12) {
+          } else {
+            __pyx_t_4 = __pyx_t_12;
+            goto __pyx_L16_bool_binop_done;
+          }
+          __pyx_t_12 = (__pyx_cur_scope->__pyx_v_force_save_cell != 0);
+          __pyx_t_4 = __pyx_t_12;
+          __pyx_L16_bool_binop_done:;
           if (__pyx_t_4) {
 
-            /* "aiocsv/_parser.pyx":100
+            /* "aiocsv/_parser.pyx":102
  *                 elif char == u'\r' or char == u'\n':
- *                     if len(row) > 0:
+ *                     if len(row) > 0 or force_save_cell:
  *                         row.append(cell)             # <<<<<<<<<<<<<<
- *                     state = ParserState.AFTER_ROW
+ *                     state = ParserState.EAT_NEWLINE
  * 
  */
-            __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 100, __pyx_L1_error)
+            __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 102, __pyx_L1_error)
 
-            /* "aiocsv/_parser.pyx":99
+            /* "aiocsv/_parser.pyx":101
  *                 # 2. Empty field + End of row
  *                 elif char == u'\r' or char == u'\n':
- *                     if len(row) > 0:             # <<<<<<<<<<<<<<
+ *                     if len(row) > 0 or force_save_cell:             # <<<<<<<<<<<<<<
  *                         row.append(cell)
- *                     state = ParserState.AFTER_ROW
+ *                     state = ParserState.EAT_NEWLINE
  */
           }
 
-          /* "aiocsv/_parser.pyx":101
- *                     if len(row) > 0:
+          /* "aiocsv/_parser.pyx":103
+ *                     if len(row) > 0 or force_save_cell:
  *                         row.append(cell)
- *                     state = ParserState.AFTER_ROW             # <<<<<<<<<<<<<<
+ *                     state = ParserState.EAT_NEWLINE             # <<<<<<<<<<<<<<
  * 
  *                 # 3. Empty field
  */
-          __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_AFTER_ROW;
+          __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_EAT_NEWLINE;
 
-          /* "aiocsv/_parser.pyx":98
+          /* "aiocsv/_parser.pyx":100
  * 
  *                 # 2. Empty field + End of row
  *                 elif char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
- *                     if len(row) > 0:
+ *                     if len(row) > 0 or force_save_cell:
  *                         row.append(cell)
  */
           goto __pyx_L12;
         }
 
-        /* "aiocsv/_parser.pyx":104
+        /* "aiocsv/_parser.pyx":106
  * 
  *                 # 3. Empty field
  *                 elif char == dialect.delimiter:             # <<<<<<<<<<<<<<
@@ -2311,28 +2359,37 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.delimiter) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":105
+          /* "aiocsv/_parser.pyx":107
  *                 # 3. Empty field
  *                 elif char == dialect.delimiter:
  *                     row.append(cell)             # <<<<<<<<<<<<<<
  *                     cell = u""
- *                     # state stays unchanged (AFTER_DELIM)
+ *                     force_save_cell = False
  */
-          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 105, __pyx_L1_error)
+          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 107, __pyx_L1_error)
 
-          /* "aiocsv/_parser.pyx":106
+          /* "aiocsv/_parser.pyx":108
  *                 elif char == dialect.delimiter:
  *                     row.append(cell)
  *                     cell = u""             # <<<<<<<<<<<<<<
+ *                     force_save_cell = False
  *                     # state stays unchanged (AFTER_DELIM)
- * 
  */
           __Pyx_INCREF(__pyx_kp_u__2);
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
           __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_cell, __pyx_kp_u__2);
           __Pyx_GIVEREF(__pyx_kp_u__2);
 
-          /* "aiocsv/_parser.pyx":104
+          /* "aiocsv/_parser.pyx":109
+ *                     row.append(cell)
+ *                     cell = u""
+ *                     force_save_cell = False             # <<<<<<<<<<<<<<
+ *                     # state stays unchanged (AFTER_DELIM)
+ * 
+ */
+          __pyx_cur_scope->__pyx_v_force_save_cell = 0;
+
+          /* "aiocsv/_parser.pyx":106
  * 
  *                 # 3. Empty field
  *                 elif char == dialect.delimiter:             # <<<<<<<<<<<<<<
@@ -2342,7 +2399,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           goto __pyx_L12;
         }
 
-        /* "aiocsv/_parser.pyx":110
+        /* "aiocsv/_parser.pyx":113
  * 
  *                 # 4. Start of a quoted cell
  *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:             # <<<<<<<<<<<<<<
@@ -2353,14 +2410,14 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         if (__pyx_t_12) {
         } else {
           __pyx_t_4 = __pyx_t_12;
-          goto __pyx_L16_bool_binop_done;
+          goto __pyx_L18_bool_binop_done;
         }
         __pyx_t_12 = ((__pyx_cur_scope->__pyx_v_dialect.quoting != __pyx_e_6aiocsv_7_parser_NONE) != 0);
         __pyx_t_4 = __pyx_t_12;
-        __pyx_L16_bool_binop_done:;
+        __pyx_L18_bool_binop_done:;
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":111
+          /* "aiocsv/_parser.pyx":114
  *                 # 4. Start of a quoted cell
  *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:
  *                     state = ParserState.IN_CELL_QUOTED             # <<<<<<<<<<<<<<
@@ -2369,7 +2426,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL_QUOTED;
 
-          /* "aiocsv/_parser.pyx":110
+          /* "aiocsv/_parser.pyx":113
  * 
  *                 # 4. Start of a quoted cell
  *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:             # <<<<<<<<<<<<<<
@@ -2379,7 +2436,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           goto __pyx_L12;
         }
 
-        /* "aiocsv/_parser.pyx":114
+        /* "aiocsv/_parser.pyx":117
  * 
  *                 # 5. Start of an escape in an unqoted field
  *                 elif char == dialect.escapechar:             # <<<<<<<<<<<<<<
@@ -2389,7 +2446,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.escapechar) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":115
+          /* "aiocsv/_parser.pyx":118
  *                 # 5. Start of an escape in an unqoted field
  *                 elif char == dialect.escapechar:
  *                     state = ParserState.ESCAPE             # <<<<<<<<<<<<<<
@@ -2398,7 +2455,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_ESCAPE;
 
-          /* "aiocsv/_parser.pyx":114
+          /* "aiocsv/_parser.pyx":117
  * 
  *                 # 5. Start of an escape in an unqoted field
  *                 elif char == dialect.escapechar:             # <<<<<<<<<<<<<<
@@ -2408,17 +2465,17 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           goto __pyx_L12;
         }
 
-        /* "aiocsv/_parser.pyx":119
+        /* "aiocsv/_parser.pyx":122
  *                 # 6. Start of an unquoted field
  *                 else:
  *                     cell += char             # <<<<<<<<<<<<<<
  *                     state = ParserState.IN_CELL
- * 
+ *                     numeric_cell = dialect.quoting == ReadQuoting.NONNUMERIC
  */
         /*else*/ {
-          __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 119, __pyx_L1_error)
+          __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 122, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 119, __pyx_L1_error)
+          __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 122, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2426,18 +2483,27 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           __Pyx_GIVEREF(__pyx_t_1);
           __pyx_t_1 = 0;
 
-          /* "aiocsv/_parser.pyx":120
+          /* "aiocsv/_parser.pyx":123
  *                 else:
  *                     cell += char
  *                     state = ParserState.IN_CELL             # <<<<<<<<<<<<<<
+ *                     numeric_cell = dialect.quoting == ReadQuoting.NONNUMERIC
+ * 
+ */
+          __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL;
+
+          /* "aiocsv/_parser.pyx":124
+ *                     cell += char
+ *                     state = ParserState.IN_CELL
+ *                     numeric_cell = dialect.quoting == ReadQuoting.NONNUMERIC             # <<<<<<<<<<<<<<
  * 
  *             elif state == ParserState.IN_CELL:
  */
-          __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL;
+          __pyx_cur_scope->__pyx_v_numeric_cell = (__pyx_cur_scope->__pyx_v_dialect.quoting == __pyx_e_6aiocsv_7_parser_NONNUMERIC);
         }
         __pyx_L12:;
 
-        /* "aiocsv/_parser.pyx":90
+        /* "aiocsv/_parser.pyx":92
  * 
  *             # (fallthrough)
  *             if state == ParserState.AFTER_DELIM:             # <<<<<<<<<<<<<<
@@ -2447,12 +2513,12 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         break;
         case __pyx_e_6aiocsv_7_parser_IN_CELL:
 
-        /* "aiocsv/_parser.pyx":126
+        /* "aiocsv/_parser.pyx":130
  * 
  *                 # 1. End of a row
  *                 if char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
+ *                     row.append(float(cell) if numeric_cell else cell)
+ * 
  */
         switch (__pyx_cur_scope->__pyx_v_char) {
           case 13:
@@ -2465,123 +2531,109 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         }
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":128
+          /* "aiocsv/_parser.pyx":131
+ *                 # 1. End of a row
  *                 if char == u'\r' or char == u'\n':
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC             # <<<<<<<<<<<<<<
- *                         else cell
- *                     )
+ *                     row.append(float(cell) if numeric_cell else cell)             # <<<<<<<<<<<<<<
+ * 
+ *                     cell = u""
  */
-          if (((__pyx_cur_scope->__pyx_v_dialect.quoting == __pyx_e_6aiocsv_7_parser_NONNUMERIC) != 0)) {
-            __pyx_t_2 = __Pyx_PyNumber_Float(__pyx_cur_scope->__pyx_v_cell); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 128, __pyx_L1_error)
+          if ((__pyx_cur_scope->__pyx_v_numeric_cell != 0)) {
+            __pyx_t_2 = __Pyx_PyNumber_Float(__pyx_cur_scope->__pyx_v_cell); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
             __pyx_t_1 = __pyx_t_2;
             __pyx_t_2 = 0;
           } else {
-
-            /* "aiocsv/_parser.pyx":129
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
- *                         else cell             # <<<<<<<<<<<<<<
- *                     )
- * 
- */
             __Pyx_INCREF(__pyx_cur_scope->__pyx_v_cell);
             __pyx_t_1 = __pyx_cur_scope->__pyx_v_cell;
           }
-
-          /* "aiocsv/_parser.pyx":127
- *                 # 1. End of a row
- *                 if char == u'\r' or char == u'\n':
- *                     row.append(             # <<<<<<<<<<<<<<
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
- *                         else cell
- */
-          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_t_1); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 127, __pyx_L1_error)
+          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_t_1); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 131, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-          /* "aiocsv/_parser.pyx":132
- *                     )
+          /* "aiocsv/_parser.pyx":133
+ *                     row.append(float(cell) if numeric_cell else cell)
  * 
  *                     cell = u""             # <<<<<<<<<<<<<<
- *                     state = ParserState.EAT_NEWLINE
- * 
+ *                     force_save_cell = False
+ *                     numeric_cell = False
  */
           __Pyx_INCREF(__pyx_kp_u__2);
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
           __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_cell, __pyx_kp_u__2);
           __Pyx_GIVEREF(__pyx_kp_u__2);
 
-          /* "aiocsv/_parser.pyx":133
+          /* "aiocsv/_parser.pyx":134
  * 
  *                     cell = u""
+ *                     force_save_cell = False             # <<<<<<<<<<<<<<
+ *                     numeric_cell = False
+ *                     state = ParserState.EAT_NEWLINE
+ */
+          __pyx_cur_scope->__pyx_v_force_save_cell = 0;
+
+          /* "aiocsv/_parser.pyx":135
+ *                     cell = u""
+ *                     force_save_cell = False
+ *                     numeric_cell = False             # <<<<<<<<<<<<<<
+ *                     state = ParserState.EAT_NEWLINE
+ * 
+ */
+          __pyx_cur_scope->__pyx_v_numeric_cell = 0;
+
+          /* "aiocsv/_parser.pyx":136
+ *                     force_save_cell = False
+ *                     numeric_cell = False
  *                     state = ParserState.EAT_NEWLINE             # <<<<<<<<<<<<<<
  * 
  *                 # 2. End of a cell
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_EAT_NEWLINE;
 
-          /* "aiocsv/_parser.pyx":126
+          /* "aiocsv/_parser.pyx":130
  * 
  *                 # 1. End of a row
  *                 if char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
+ *                     row.append(float(cell) if numeric_cell else cell)
+ * 
  */
-          goto __pyx_L18;
+          goto __pyx_L20;
         }
 
-        /* "aiocsv/_parser.pyx":136
+        /* "aiocsv/_parser.pyx":139
  * 
  *                 # 2. End of a cell
  *                 elif char == dialect.delimiter:             # <<<<<<<<<<<<<<
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
+ *                     row.append(float(cell) if numeric_cell else cell)  # type: ignore
+ * 
  */
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.delimiter) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":138
+          /* "aiocsv/_parser.pyx":140
+ *                 # 2. End of a cell
  *                 elif char == dialect.delimiter:
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC             # <<<<<<<<<<<<<<
- *                         else cell
- *                     )
+ *                     row.append(float(cell) if numeric_cell else cell)  # type: ignore             # <<<<<<<<<<<<<<
+ * 
+ *                     cell = u""
  */
-          if (((__pyx_cur_scope->__pyx_v_dialect.quoting == __pyx_e_6aiocsv_7_parser_NONNUMERIC) != 0)) {
-            __pyx_t_2 = __Pyx_PyNumber_Float(__pyx_cur_scope->__pyx_v_cell); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 138, __pyx_L1_error)
+          if ((__pyx_cur_scope->__pyx_v_numeric_cell != 0)) {
+            __pyx_t_2 = __Pyx_PyNumber_Float(__pyx_cur_scope->__pyx_v_cell); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 140, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
             __pyx_t_1 = __pyx_t_2;
             __pyx_t_2 = 0;
           } else {
-
-            /* "aiocsv/_parser.pyx":139
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
- *                         else cell             # <<<<<<<<<<<<<<
- *                     )
- * 
- */
             __Pyx_INCREF(__pyx_cur_scope->__pyx_v_cell);
             __pyx_t_1 = __pyx_cur_scope->__pyx_v_cell;
           }
-
-          /* "aiocsv/_parser.pyx":137
- *                 # 2. End of a cell
- *                 elif char == dialect.delimiter:
- *                     row.append(             # <<<<<<<<<<<<<<
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
- *                         else cell
- */
-          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_t_1); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 137, __pyx_L1_error)
+          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_t_1); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 140, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
           /* "aiocsv/_parser.pyx":142
- *                     )
+ *                     row.append(float(cell) if numeric_cell else cell)  # type: ignore
  * 
  *                     cell = u""             # <<<<<<<<<<<<<<
- *                     state = ParserState.AFTER_DELIM
- * 
+ *                     force_save_cell = False
+ *                     numeric_cell = False
  */
           __Pyx_INCREF(__pyx_kp_u__2);
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2591,23 +2643,41 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           /* "aiocsv/_parser.pyx":143
  * 
  *                     cell = u""
+ *                     force_save_cell = False             # <<<<<<<<<<<<<<
+ *                     numeric_cell = False
+ *                     state = ParserState.AFTER_DELIM
+ */
+          __pyx_cur_scope->__pyx_v_force_save_cell = 0;
+
+          /* "aiocsv/_parser.pyx":144
+ *                     cell = u""
+ *                     force_save_cell = False
+ *                     numeric_cell = False             # <<<<<<<<<<<<<<
+ *                     state = ParserState.AFTER_DELIM
+ * 
+ */
+          __pyx_cur_scope->__pyx_v_numeric_cell = 0;
+
+          /* "aiocsv/_parser.pyx":145
+ *                     force_save_cell = False
+ *                     numeric_cell = False
  *                     state = ParserState.AFTER_DELIM             # <<<<<<<<<<<<<<
  * 
  *                 # 3. Start of an espace
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_AFTER_DELIM;
 
-          /* "aiocsv/_parser.pyx":136
+          /* "aiocsv/_parser.pyx":139
  * 
  *                 # 2. End of a cell
  *                 elif char == dialect.delimiter:             # <<<<<<<<<<<<<<
- *                     row.append(
- *                         float(cell) if dialect.quoting == ReadQuoting.NONNUMERIC
+ *                     row.append(float(cell) if numeric_cell else cell)  # type: ignore
+ * 
  */
-          goto __pyx_L18;
+          goto __pyx_L20;
         }
 
-        /* "aiocsv/_parser.pyx":146
+        /* "aiocsv/_parser.pyx":148
  * 
  *                 # 3. Start of an espace
  *                 elif char == dialect.escapechar:             # <<<<<<<<<<<<<<
@@ -2617,7 +2687,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.escapechar) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":147
+          /* "aiocsv/_parser.pyx":149
  *                 # 3. Start of an espace
  *                 elif char == dialect.escapechar:
  *                     state = ParserState.ESCAPE             # <<<<<<<<<<<<<<
@@ -2626,17 +2696,17 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_ESCAPE;
 
-          /* "aiocsv/_parser.pyx":146
+          /* "aiocsv/_parser.pyx":148
  * 
  *                 # 3. Start of an espace
  *                 elif char == dialect.escapechar:             # <<<<<<<<<<<<<<
  *                     state = ParserState.ESCAPE
  * 
  */
-          goto __pyx_L18;
+          goto __pyx_L20;
         }
 
-        /* "aiocsv/_parser.pyx":151
+        /* "aiocsv/_parser.pyx":153
  *                 # 4. Normal char
  *                 else:
  *                     cell += char             # <<<<<<<<<<<<<<
@@ -2644,9 +2714,9 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  *             elif state == ParserState.ESCAPE:
  */
         /*else*/ {
-          __pyx_t_1 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 151, __pyx_L1_error)
+          __pyx_t_1 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 153, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_2 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 151, __pyx_L1_error)
+          __pyx_t_2 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 153, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2654,10 +2724,10 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           __Pyx_GIVEREF(__pyx_t_2);
           __pyx_t_2 = 0;
         }
-        __pyx_L18:;
+        __pyx_L20:;
 
-        /* "aiocsv/_parser.pyx":122
- *                     state = ParserState.IN_CELL
+        /* "aiocsv/_parser.pyx":126
+ *                     numeric_cell = dialect.quoting == ReadQuoting.NONNUMERIC
  * 
  *             elif state == ParserState.IN_CELL:             # <<<<<<<<<<<<<<
  *                 # -- Inside an unqouted cell --
@@ -2666,16 +2736,16 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         break;
         case __pyx_e_6aiocsv_7_parser_ESCAPE:
 
-        /* "aiocsv/_parser.pyx":154
+        /* "aiocsv/_parser.pyx":156
  * 
  *             elif state == ParserState.ESCAPE:
  *                 cell += char             # <<<<<<<<<<<<<<
  *                 state = ParserState.IN_CELL
  * 
  */
-        __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 154, __pyx_L1_error)
+        __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 156, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
-        __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 154, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 156, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
         __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2683,7 +2753,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __Pyx_GIVEREF(__pyx_t_1);
         __pyx_t_1 = 0;
 
-        /* "aiocsv/_parser.pyx":155
+        /* "aiocsv/_parser.pyx":157
  *             elif state == ParserState.ESCAPE:
  *                 cell += char
  *                 state = ParserState.IN_CELL             # <<<<<<<<<<<<<<
@@ -2692,7 +2762,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
         __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL;
 
-        /* "aiocsv/_parser.pyx":153
+        /* "aiocsv/_parser.pyx":155
  *                     cell += char
  * 
  *             elif state == ParserState.ESCAPE:             # <<<<<<<<<<<<<<
@@ -2702,7 +2772,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         break;
         case __pyx_e_6aiocsv_7_parser_IN_CELL_QUOTED:
 
-        /* "aiocsv/_parser.pyx":161
+        /* "aiocsv/_parser.pyx":163
  * 
  *                 # 1. Start of an escape
  *                 if char == dialect.escapechar:             # <<<<<<<<<<<<<<
@@ -2712,7 +2782,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.escapechar) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":162
+          /* "aiocsv/_parser.pyx":164
  *                 # 1. Start of an escape
  *                 if char == dialect.escapechar:
  *                     state = ParserState.ESCAPE_QUOTED             # <<<<<<<<<<<<<<
@@ -2721,67 +2791,76 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_ESCAPE_QUOTED;
 
-          /* "aiocsv/_parser.pyx":161
+          /* "aiocsv/_parser.pyx":163
  * 
  *                 # 1. Start of an escape
  *                 if char == dialect.escapechar:             # <<<<<<<<<<<<<<
  *                     state = ParserState.ESCAPE_QUOTED
  * 
  */
-          goto __pyx_L19;
+          goto __pyx_L21;
         }
 
-        /* "aiocsv/_parser.pyx":165
+        /* "aiocsv/_parser.pyx":167
  * 
  *                 # 2. Quotechar
- *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:             # <<<<<<<<<<<<<<
- *                     state = ParserState.QUOTE_IN_QUOTED if dialect.doublequote \
- *                         else ParserState.IN_CELL
+ *                 elif dialect.quoting != ReadQuoting.NONE and char == dialect.quotechar and \             # <<<<<<<<<<<<<<
+ *                         dialect.doublequote:
+ *                     state = ParserState.QUOTE_IN_QUOTED
  */
+        __pyx_t_12 = ((__pyx_cur_scope->__pyx_v_dialect.quoting != __pyx_e_6aiocsv_7_parser_NONE) != 0);
+        if (__pyx_t_12) {
+        } else {
+          __pyx_t_4 = __pyx_t_12;
+          goto __pyx_L22_bool_binop_done;
+        }
         __pyx_t_12 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.quotechar) != 0);
         if (__pyx_t_12) {
         } else {
           __pyx_t_4 = __pyx_t_12;
-          goto __pyx_L20_bool_binop_done;
+          goto __pyx_L22_bool_binop_done;
         }
-        __pyx_t_12 = ((__pyx_cur_scope->__pyx_v_dialect.quoting != __pyx_e_6aiocsv_7_parser_NONE) != 0);
-        __pyx_t_4 = __pyx_t_12;
-        __pyx_L20_bool_binop_done:;
-        if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":166
+        /* "aiocsv/_parser.pyx":168
  *                 # 2. Quotechar
- *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:
- *                     state = ParserState.QUOTE_IN_QUOTED if dialect.doublequote \             # <<<<<<<<<<<<<<
- *                         else ParserState.IN_CELL
+ *                 elif dialect.quoting != ReadQuoting.NONE and char == dialect.quotechar and \
+ *                         dialect.doublequote:             # <<<<<<<<<<<<<<
+ *                     state = ParserState.QUOTE_IN_QUOTED
  * 
  */
-          if ((__pyx_cur_scope->__pyx_v_dialect.doublequote != 0)) {
-            __pyx_t_15 = __pyx_e_6aiocsv_7_parser_QUOTE_IN_QUOTED;
-          } else {
+        __pyx_t_12 = (__pyx_cur_scope->__pyx_v_dialect.doublequote != 0);
+        __pyx_t_4 = __pyx_t_12;
+        __pyx_L22_bool_binop_done:;
 
-            /* "aiocsv/_parser.pyx":167
- *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:
- *                     state = ParserState.QUOTE_IN_QUOTED if dialect.doublequote \
- *                         else ParserState.IN_CELL             # <<<<<<<<<<<<<<
+        /* "aiocsv/_parser.pyx":167
+ * 
+ *                 # 2. Quotechar
+ *                 elif dialect.quoting != ReadQuoting.NONE and char == dialect.quotechar and \             # <<<<<<<<<<<<<<
+ *                         dialect.doublequote:
+ *                     state = ParserState.QUOTE_IN_QUOTED
+ */
+        if (__pyx_t_4) {
+
+          /* "aiocsv/_parser.pyx":169
+ *                 elif dialect.quoting != ReadQuoting.NONE and char == dialect.quotechar and \
+ *                         dialect.doublequote:
+ *                     state = ParserState.QUOTE_IN_QUOTED             # <<<<<<<<<<<<<<
  * 
  *                 # 3. Every other char
  */
-            __pyx_t_15 = __pyx_e_6aiocsv_7_parser_IN_CELL;
-          }
-          __pyx_cur_scope->__pyx_v_state = __pyx_t_15;
+          __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_QUOTE_IN_QUOTED;
 
-          /* "aiocsv/_parser.pyx":165
+          /* "aiocsv/_parser.pyx":167
  * 
  *                 # 2. Quotechar
- *                 elif char == dialect.quotechar and dialect.quoting != ReadQuoting.NONE:             # <<<<<<<<<<<<<<
- *                     state = ParserState.QUOTE_IN_QUOTED if dialect.doublequote \
- *                         else ParserState.IN_CELL
+ *                 elif dialect.quoting != ReadQuoting.NONE and char == dialect.quotechar and \             # <<<<<<<<<<<<<<
+ *                         dialect.doublequote:
+ *                     state = ParserState.QUOTE_IN_QUOTED
  */
-          goto __pyx_L19;
+          goto __pyx_L21;
         }
 
-        /* "aiocsv/_parser.pyx":171
+        /* "aiocsv/_parser.pyx":173
  *                 # 3. Every other char
  *                 else:
  *                     cell += char             # <<<<<<<<<<<<<<
@@ -2789,9 +2868,9 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  *             elif state == ParserState.ESCAPE_QUOTED:
  */
         /*else*/ {
-          __pyx_t_1 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 171, __pyx_L1_error)
+          __pyx_t_1 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 173, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_2 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L1_error)
+          __pyx_t_2 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 173, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2799,9 +2878,9 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           __Pyx_GIVEREF(__pyx_t_2);
           __pyx_t_2 = 0;
         }
-        __pyx_L19:;
+        __pyx_L21:;
 
-        /* "aiocsv/_parser.pyx":157
+        /* "aiocsv/_parser.pyx":159
  *                 state = ParserState.IN_CELL
  * 
  *             elif state == ParserState.IN_CELL_QUOTED:             # <<<<<<<<<<<<<<
@@ -2811,16 +2890,16 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         break;
         case __pyx_e_6aiocsv_7_parser_ESCAPE_QUOTED:
 
-        /* "aiocsv/_parser.pyx":174
+        /* "aiocsv/_parser.pyx":176
  * 
  *             elif state == ParserState.ESCAPE_QUOTED:
  *                 cell += char             # <<<<<<<<<<<<<<
  *                 state = ParserState.IN_CELL_QUOTED
  * 
  */
-        __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 174, __pyx_L1_error)
+        __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 176, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
-        __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 174, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 176, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
         __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2828,7 +2907,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __Pyx_GIVEREF(__pyx_t_1);
         __pyx_t_1 = 0;
 
-        /* "aiocsv/_parser.pyx":175
+        /* "aiocsv/_parser.pyx":177
  *             elif state == ParserState.ESCAPE_QUOTED:
  *                 cell += char
  *                 state = ParserState.IN_CELL_QUOTED             # <<<<<<<<<<<<<<
@@ -2837,7 +2916,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
         __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL_QUOTED;
 
-        /* "aiocsv/_parser.pyx":173
+        /* "aiocsv/_parser.pyx":175
  *                     cell += char
  * 
  *             elif state == ParserState.ESCAPE_QUOTED:             # <<<<<<<<<<<<<<
@@ -2847,7 +2926,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         break;
         case __pyx_e_6aiocsv_7_parser_QUOTE_IN_QUOTED:
 
-        /* "aiocsv/_parser.pyx":182
+        /* "aiocsv/_parser.pyx":184
  * 
  *                 # 1. Double-quote
  *                 if char == dialect.quotechar:             # <<<<<<<<<<<<<<
@@ -2857,16 +2936,16 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.quotechar) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":183
+          /* "aiocsv/_parser.pyx":185
  *                 # 1. Double-quote
  *                 if char == dialect.quotechar:
  *                     cell += char             # <<<<<<<<<<<<<<
  *                     state = ParserState.IN_CELL_QUOTED
  * 
  */
-          __pyx_t_1 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 183, __pyx_L1_error)
+          __pyx_t_1 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_2 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 183, __pyx_L1_error)
+          __pyx_t_2 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 185, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -2874,7 +2953,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           __Pyx_GIVEREF(__pyx_t_2);
           __pyx_t_2 = 0;
 
-          /* "aiocsv/_parser.pyx":184
+          /* "aiocsv/_parser.pyx":186
  *                 if char == dialect.quotechar:
  *                     cell += char
  *                     state = ParserState.IN_CELL_QUOTED             # <<<<<<<<<<<<<<
@@ -2883,17 +2962,17 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL_QUOTED;
 
-          /* "aiocsv/_parser.pyx":182
+          /* "aiocsv/_parser.pyx":184
  * 
  *                 # 1. Double-quote
  *                 if char == dialect.quotechar:             # <<<<<<<<<<<<<<
  *                     cell += char
  *                     state = ParserState.IN_CELL_QUOTED
  */
-          goto __pyx_L22;
+          goto __pyx_L25;
         }
 
-        /* "aiocsv/_parser.pyx":187
+        /* "aiocsv/_parser.pyx":189
  * 
  *                 # 2. End of a row
  *                 elif char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
@@ -2911,47 +2990,56 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         }
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":188
+          /* "aiocsv/_parser.pyx":190
  *                 # 2. End of a row
  *                 elif char == u'\r' or char == u'\n':
  *                     row.append(cell)             # <<<<<<<<<<<<<<
  *                     cell = u""
- *                     state = ParserState.EAT_NEWLINE
+ *                     force_save_cell = False
  */
-          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 188, __pyx_L1_error)
+          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 190, __pyx_L1_error)
 
-          /* "aiocsv/_parser.pyx":189
+          /* "aiocsv/_parser.pyx":191
  *                 elif char == u'\r' or char == u'\n':
  *                     row.append(cell)
  *                     cell = u""             # <<<<<<<<<<<<<<
+ *                     force_save_cell = False
  *                     state = ParserState.EAT_NEWLINE
- * 
  */
           __Pyx_INCREF(__pyx_kp_u__2);
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
           __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_cell, __pyx_kp_u__2);
           __Pyx_GIVEREF(__pyx_kp_u__2);
 
-          /* "aiocsv/_parser.pyx":190
+          /* "aiocsv/_parser.pyx":192
  *                     row.append(cell)
  *                     cell = u""
+ *                     force_save_cell = False             # <<<<<<<<<<<<<<
+ *                     state = ParserState.EAT_NEWLINE
+ * 
+ */
+          __pyx_cur_scope->__pyx_v_force_save_cell = 0;
+
+          /* "aiocsv/_parser.pyx":193
+ *                     cell = u""
+ *                     force_save_cell = False
  *                     state = ParserState.EAT_NEWLINE             # <<<<<<<<<<<<<<
  * 
  *                 # 3. End of a cell
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_EAT_NEWLINE;
 
-          /* "aiocsv/_parser.pyx":187
+          /* "aiocsv/_parser.pyx":189
  * 
  *                 # 2. End of a row
  *                 elif char == u'\r' or char == u'\n':             # <<<<<<<<<<<<<<
  *                     row.append(cell)
  *                     cell = u""
  */
-          goto __pyx_L22;
+          goto __pyx_L25;
         }
 
-        /* "aiocsv/_parser.pyx":193
+        /* "aiocsv/_parser.pyx":196
  * 
  *                 # 3. End of a cell
  *                 elif char == dialect.delimiter:             # <<<<<<<<<<<<<<
@@ -2961,47 +3049,56 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         __pyx_t_4 = ((__pyx_cur_scope->__pyx_v_char == __pyx_cur_scope->__pyx_v_dialect.delimiter) != 0);
         if (__pyx_t_4) {
 
-          /* "aiocsv/_parser.pyx":194
+          /* "aiocsv/_parser.pyx":197
  *                 # 3. End of a cell
  *                 elif char == dialect.delimiter:
  *                     row.append(cell)             # <<<<<<<<<<<<<<
  *                     cell = u""
- *                     state = ParserState.AFTER_DELIM
+ *                     force_save_cell = False
  */
-          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 194, __pyx_L1_error)
+          __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 197, __pyx_L1_error)
 
-          /* "aiocsv/_parser.pyx":195
+          /* "aiocsv/_parser.pyx":198
  *                 elif char == dialect.delimiter:
  *                     row.append(cell)
  *                     cell = u""             # <<<<<<<<<<<<<<
+ *                     force_save_cell = False
  *                     state = ParserState.AFTER_DELIM
- * 
  */
           __Pyx_INCREF(__pyx_kp_u__2);
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
           __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_cell, __pyx_kp_u__2);
           __Pyx_GIVEREF(__pyx_kp_u__2);
 
-          /* "aiocsv/_parser.pyx":196
+          /* "aiocsv/_parser.pyx":199
  *                     row.append(cell)
  *                     cell = u""
+ *                     force_save_cell = False             # <<<<<<<<<<<<<<
+ *                     state = ParserState.AFTER_DELIM
+ * 
+ */
+          __pyx_cur_scope->__pyx_v_force_save_cell = 0;
+
+          /* "aiocsv/_parser.pyx":200
+ *                     cell = u""
+ *                     force_save_cell = False
  *                     state = ParserState.AFTER_DELIM             # <<<<<<<<<<<<<<
  * 
  *                 # 4. Unescaped quotechar
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_AFTER_DELIM;
 
-          /* "aiocsv/_parser.pyx":193
+          /* "aiocsv/_parser.pyx":196
  * 
  *                 # 3. End of a cell
  *                 elif char == dialect.delimiter:             # <<<<<<<<<<<<<<
  *                     row.append(cell)
  *                     cell = u""
  */
-          goto __pyx_L22;
+          goto __pyx_L25;
         }
 
-        /* "aiocsv/_parser.pyx":200
+        /* "aiocsv/_parser.pyx":204
  *                 # 4. Unescaped quotechar
  *                 else:
  *                     cell += char             # <<<<<<<<<<<<<<
@@ -3009,9 +3106,9 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  * 
  */
         /*else*/ {
-          __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L1_error)
+          __pyx_t_2 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_char); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 204, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 200, __pyx_L1_error)
+          __pyx_t_1 = __Pyx_PyUnicode_ConcatSafe(__pyx_cur_scope->__pyx_v_cell, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 204, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_cell);
@@ -3019,7 +3116,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           __Pyx_GIVEREF(__pyx_t_1);
           __pyx_t_1 = 0;
 
-          /* "aiocsv/_parser.pyx":201
+          /* "aiocsv/_parser.pyx":205
  *                 else:
  *                     cell += char
  *                     state = ParserState.IN_CELL             # <<<<<<<<<<<<<<
@@ -3028,7 +3125,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           __pyx_cur_scope->__pyx_v_state = __pyx_e_6aiocsv_7_parser_IN_CELL;
 
-          /* "aiocsv/_parser.pyx":203
+          /* "aiocsv/_parser.pyx":207
  *                     state = ParserState.IN_CELL
  * 
  *                     if dialect.strict:             # <<<<<<<<<<<<<<
@@ -3038,58 +3135,58 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
           __pyx_t_4 = (__pyx_cur_scope->__pyx_v_dialect.strict != 0);
           if (unlikely(__pyx_t_4)) {
 
-            /* "aiocsv/_parser.pyx":204
+            /* "aiocsv/_parser.pyx":208
  * 
  *                     if dialect.strict:
  *                         raise csv.Error(             # <<<<<<<<<<<<<<
  *                             f"'{dialect.delimiter}' expected after '{dialect.quotechar}'"
  *                         )
  */
-            __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_csv); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 204, __pyx_L1_error)
+            __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_csv); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_Error); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 204, __pyx_L1_error)
+            __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_Error); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_3);
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-            /* "aiocsv/_parser.pyx":205
+            /* "aiocsv/_parser.pyx":209
  *                     if dialect.strict:
  *                         raise csv.Error(
  *                             f"'{dialect.delimiter}' expected after '{dialect.quotechar}'"             # <<<<<<<<<<<<<<
  *                         )
  * 
  */
-            __pyx_t_2 = PyTuple_New(5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 205, __pyx_L1_error)
+            __pyx_t_2 = PyTuple_New(5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
             __pyx_t_13 = 0;
-            __pyx_t_16 = 127;
+            __pyx_t_15 = 127;
             __Pyx_INCREF(__pyx_kp_u__3);
             __pyx_t_13 += 1;
             __Pyx_GIVEREF(__pyx_kp_u__3);
             PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_kp_u__3);
-            __pyx_t_17 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_dialect.delimiter); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_17);
-            __pyx_t_16 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_17) > __pyx_t_16) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_17) : __pyx_t_16;
-            __pyx_t_13 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_17);
-            __Pyx_GIVEREF(__pyx_t_17);
-            PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_17);
-            __pyx_t_17 = 0;
+            __pyx_t_16 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_dialect.delimiter); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_16);
+            __pyx_t_15 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_16) > __pyx_t_15) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_16) : __pyx_t_15;
+            __pyx_t_13 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_16);
+            __Pyx_GIVEREF(__pyx_t_16);
+            PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_16);
+            __pyx_t_16 = 0;
             __Pyx_INCREF(__pyx_kp_u_expected_after);
             __pyx_t_13 += 18;
             __Pyx_GIVEREF(__pyx_kp_u_expected_after);
             PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_kp_u_expected_after);
-            __pyx_t_17 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_dialect.quotechar); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_17);
-            __pyx_t_16 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_17) > __pyx_t_16) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_17) : __pyx_t_16;
-            __pyx_t_13 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_17);
-            __Pyx_GIVEREF(__pyx_t_17);
-            PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_t_17);
-            __pyx_t_17 = 0;
+            __pyx_t_16 = PyUnicode_FromOrdinal(__pyx_cur_scope->__pyx_v_dialect.quotechar); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_16);
+            __pyx_t_15 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_16) > __pyx_t_15) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_16) : __pyx_t_15;
+            __pyx_t_13 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_16);
+            __Pyx_GIVEREF(__pyx_t_16);
+            PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_t_16);
+            __pyx_t_16 = 0;
             __Pyx_INCREF(__pyx_kp_u__3);
             __pyx_t_13 += 1;
             __Pyx_GIVEREF(__pyx_kp_u__3);
             PyTuple_SET_ITEM(__pyx_t_2, 4, __pyx_kp_u__3);
-            __pyx_t_17 = __Pyx_PyUnicode_Join(__pyx_t_2, 5, __pyx_t_13, __pyx_t_16); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_17);
+            __pyx_t_16 = __Pyx_PyUnicode_Join(__pyx_t_2, 5, __pyx_t_13, __pyx_t_15); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_16);
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
             __pyx_t_2 = NULL;
             if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -3101,17 +3198,17 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
                 __Pyx_DECREF_SET(__pyx_t_3, function);
               }
             }
-            __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_t_17) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_17);
+            __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_t_16) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_16);
             __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-            __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-            if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 204, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
+            if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 208, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_1);
             __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
             __Pyx_Raise(__pyx_t_1, 0, 0, 0);
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-            __PYX_ERR(0, 204, __pyx_L1_error)
+            __PYX_ERR(0, 208, __pyx_L1_error)
 
-            /* "aiocsv/_parser.pyx":203
+            /* "aiocsv/_parser.pyx":207
  *                     state = ParserState.IN_CELL
  * 
  *                     if dialect.strict:             # <<<<<<<<<<<<<<
@@ -3120,9 +3217,9 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
  */
           }
         }
-        __pyx_L22:;
+        __pyx_L25:;
 
-        /* "aiocsv/_parser.pyx":177
+        /* "aiocsv/_parser.pyx":179
  *                 state = ParserState.IN_CELL_QUOTED
  * 
  *             elif state == ParserState.QUOTE_IN_QUOTED:             # <<<<<<<<<<<<<<
@@ -3132,46 +3229,46 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
         break;
         default:
 
-        /* "aiocsv/_parser.pyx":209
+        /* "aiocsv/_parser.pyx":213
  * 
  *             else:
  *                 raise RuntimeError("wtf")             # <<<<<<<<<<<<<<
  * 
  *         # Read more data
  */
-        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 209, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 213, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_Raise(__pyx_t_1, 0, 0, 0);
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        __PYX_ERR(0, 209, __pyx_L1_error)
+        __PYX_ERR(0, 213, __pyx_L1_error)
         break;
       }
       __pyx_L7_continue:;
     }
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-    /* "aiocsv/_parser.pyx":212
+    /* "aiocsv/_parser.pyx":216
  * 
  *         # Read more data
  *         data = <unicode?>(await reader.read(READ_SIZE))             # <<<<<<<<<<<<<<
  * 
- *     if cell:
+ *     if cell or force_save_cell:
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_cur_scope->__pyx_v_reader, __pyx_n_s_read); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_cur_scope->__pyx_v_reader, __pyx_n_s_read); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 216, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_17 = NULL;
+    __pyx_t_16 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
-      __pyx_t_17 = PyMethod_GET_SELF(__pyx_t_3);
-      if (likely(__pyx_t_17)) {
+      __pyx_t_16 = PyMethod_GET_SELF(__pyx_t_3);
+      if (likely(__pyx_t_16)) {
         PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-        __Pyx_INCREF(__pyx_t_17);
+        __Pyx_INCREF(__pyx_t_16);
         __Pyx_INCREF(function);
         __Pyx_DECREF_SET(__pyx_t_3, function);
       }
     }
-    __pyx_t_1 = (__pyx_t_17) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_17, __pyx_int_2048) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_int_2048);
-    __Pyx_XDECREF(__pyx_t_17); __pyx_t_17 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_1 = (__pyx_t_16) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_16, __pyx_int_2048) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_int_2048);
+    __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 216, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_r = __Pyx_Coroutine_Yield_From(__pyx_generator, __pyx_t_1);
@@ -3184,15 +3281,15 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
       /* return from async generator, awaiting value */
       __pyx_generator->resume_label = 3;
       return __pyx_r;
-      __pyx_L24_resume_from_await:;
-      if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 212, __pyx_L1_error)
+      __pyx_L27_resume_from_await:;
+      if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 216, __pyx_L1_error)
       __pyx_t_1 = __pyx_sent_value; __Pyx_INCREF(__pyx_t_1);
     } else {
       __pyx_t_1 = NULL;
-      if (__Pyx_PyGen_FetchStopIterationValue(&__pyx_t_1) < 0) __PYX_ERR(0, 212, __pyx_L1_error)
+      if (__Pyx_PyGen_FetchStopIterationValue(&__pyx_t_1) < 0) __PYX_ERR(0, 216, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
     }
-    if (!(likely(PyUnicode_CheckExact(__pyx_t_1))||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "unicode", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(0, 212, __pyx_L1_error)
+    if (!(likely(PyUnicode_CheckExact(__pyx_t_1))||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "unicode", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(0, 216, __pyx_L1_error)
     __pyx_t_3 = __pyx_t_1;
     __Pyx_INCREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -3202,37 +3299,55 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
     __pyx_t_3 = 0;
   }
 
-  /* "aiocsv/_parser.pyx":214
+  /* "aiocsv/_parser.pyx":218
  *         data = <unicode?>(await reader.read(READ_SIZE))
  * 
- *     if cell:             # <<<<<<<<<<<<<<
- *         row.append(cell)
+ *     if cell or force_save_cell:             # <<<<<<<<<<<<<<
+ *         row.append(float(cell) if numeric_cell else cell)
  *     if row:
  */
-  __pyx_t_4 = (__pyx_cur_scope->__pyx_v_cell != Py_None)&&(__Pyx_PyUnicode_IS_TRUE(__pyx_cur_scope->__pyx_v_cell) != 0);
+  __pyx_t_12 = (__pyx_cur_scope->__pyx_v_cell != Py_None)&&(__Pyx_PyUnicode_IS_TRUE(__pyx_cur_scope->__pyx_v_cell) != 0);
+  if (!__pyx_t_12) {
+  } else {
+    __pyx_t_4 = __pyx_t_12;
+    goto __pyx_L29_bool_binop_done;
+  }
+  __pyx_t_12 = (__pyx_cur_scope->__pyx_v_force_save_cell != 0);
+  __pyx_t_4 = __pyx_t_12;
+  __pyx_L29_bool_binop_done:;
   if (__pyx_t_4) {
 
-    /* "aiocsv/_parser.pyx":215
+    /* "aiocsv/_parser.pyx":219
  * 
- *     if cell:
- *         row.append(cell)             # <<<<<<<<<<<<<<
+ *     if cell or force_save_cell:
+ *         row.append(float(cell) if numeric_cell else cell)             # <<<<<<<<<<<<<<
  *     if row:
  *         yield row
  */
-    __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_cur_scope->__pyx_v_cell); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 215, __pyx_L1_error)
+    if ((__pyx_cur_scope->__pyx_v_numeric_cell != 0)) {
+      __pyx_t_1 = __Pyx_PyNumber_Float(__pyx_cur_scope->__pyx_v_cell); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_t_3 = __pyx_t_1;
+      __pyx_t_1 = 0;
+    } else {
+      __Pyx_INCREF(__pyx_cur_scope->__pyx_v_cell);
+      __pyx_t_3 = __pyx_cur_scope->__pyx_v_cell;
+    }
+    __pyx_t_14 = __Pyx_PyList_Append(__pyx_cur_scope->__pyx_v_row, __pyx_t_3); if (unlikely(__pyx_t_14 == ((int)-1))) __PYX_ERR(0, 219, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "aiocsv/_parser.pyx":214
+    /* "aiocsv/_parser.pyx":218
  *         data = <unicode?>(await reader.read(READ_SIZE))
  * 
- *     if cell:             # <<<<<<<<<<<<<<
- *         row.append(cell)
+ *     if cell or force_save_cell:             # <<<<<<<<<<<<<<
+ *         row.append(float(cell) if numeric_cell else cell)
  *     if row:
  */
   }
 
-  /* "aiocsv/_parser.pyx":216
- *     if cell:
- *         row.append(cell)
+  /* "aiocsv/_parser.pyx":220
+ *     if cell or force_save_cell:
+ *         row.append(float(cell) if numeric_cell else cell)
  *     if row:             # <<<<<<<<<<<<<<
  *         yield row
  * 
@@ -3240,8 +3355,8 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
   __pyx_t_4 = (PyList_GET_SIZE(__pyx_cur_scope->__pyx_v_row) != 0);
   if (__pyx_t_4) {
 
-    /* "aiocsv/_parser.pyx":217
- *         row.append(cell)
+    /* "aiocsv/_parser.pyx":221
+ *         row.append(float(cell) if numeric_cell else cell)
  *     if row:
  *         yield row             # <<<<<<<<<<<<<<
  * 
@@ -3254,12 +3369,12 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
     /* return from async generator, yielding value */
     __pyx_generator->resume_label = 4;
     return __Pyx__PyAsyncGenValueWrapperNew(__pyx_r);
-    __pyx_L27_resume_from_yield:;
-    if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 217, __pyx_L1_error)
+    __pyx_L32_resume_from_yield:;
+    if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 221, __pyx_L1_error)
 
-    /* "aiocsv/_parser.pyx":216
- *     if cell:
- *         row.append(cell)
+    /* "aiocsv/_parser.pyx":220
+ *     if cell or force_save_cell:
+ *         row.append(float(cell) if numeric_cell else cell)
  *     if row:             # <<<<<<<<<<<<<<
  *         yield row
  * 
@@ -3283,7 +3398,7 @@ static PyObject *__pyx_gb_6aiocsv_7_parser_2generator(__pyx_CoroutineObject *__p
   __Pyx_XDECREF(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_5);
-  __Pyx_XDECREF(__pyx_t_17);
+  __Pyx_XDECREF(__pyx_t_16);
   __Pyx_AddTraceback("parser", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_L0:;
   __Pyx_XDECREF(__pyx_r); __pyx_r = 0;
@@ -3480,9 +3595,11 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_doublequote, __pyx_k_doublequote, sizeof(__pyx_k_doublequote), 0, 0, 1, 1},
   {&__pyx_n_s_escapechar, __pyx_k_escapechar, sizeof(__pyx_k_escapechar), 0, 0, 1, 1},
   {&__pyx_kp_u_expected_after, __pyx_k_expected_after, sizeof(__pyx_k_expected_after), 0, 1, 0, 0},
+  {&__pyx_n_s_force_save_cell, __pyx_k_force_save_cell, sizeof(__pyx_k_force_save_cell), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
+  {&__pyx_n_s_numeric_cell, __pyx_k_numeric_cell, sizeof(__pyx_k_numeric_cell), 0, 0, 1, 1},
   {&__pyx_n_s_parser, __pyx_k_parser, sizeof(__pyx_k_parser), 0, 0, 1, 1},
   {&__pyx_n_s_pydialect, __pyx_k_pydialect, sizeof(__pyx_k_pydialect), 0, 0, 1, 1},
   {&__pyx_n_s_quotechar, __pyx_k_quotechar, sizeof(__pyx_k_quotechar), 0, 0, 1, 1},
@@ -3496,11 +3613,11 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_strict, __pyx_k_strict, sizeof(__pyx_k_strict), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_throw, __pyx_k_throw, sizeof(__pyx_k_throw), 0, 0, 1, 1},
-  {&__pyx_n_s_wtf, __pyx_k_wtf, sizeof(__pyx_k_wtf), 0, 0, 1, 1},
+  {&__pyx_n_u_wtf, __pyx_k_wtf, sizeof(__pyx_k_wtf), 0, 1, 0, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(0, 213, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -3510,14 +3627,14 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "aiocsv/_parser.pyx":209
+  /* "aiocsv/_parser.pyx":213
  * 
  *             else:
  *                 raise RuntimeError("wtf")             # <<<<<<<<<<<<<<
  * 
  *         # Read more data
  */
-  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_n_s_wtf); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_n_u_wtf); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 213, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__4);
   __Pyx_GIVEREF(__pyx_tuple__4);
 
@@ -3528,10 +3645,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *     cdef unicode data = <unicode?>(await reader.read(READ_SIZE))
  *     cdef CDialect dialect = get_dialect(pydialect)
  */
-  __pyx_tuple__5 = PyTuple_Pack(8, __pyx_n_s_reader, __pyx_n_s_pydialect, __pyx_n_s_data, __pyx_n_s_dialect, __pyx_n_s_state, __pyx_n_s_row, __pyx_n_s_cell, __pyx_n_s_char); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_tuple__5 = PyTuple_Pack(10, __pyx_n_s_reader, __pyx_n_s_pydialect, __pyx_n_s_data, __pyx_n_s_dialect, __pyx_n_s_state, __pyx_n_s_row, __pyx_n_s_cell, __pyx_n_s_force_save_cell, __pyx_n_s_numeric_cell, __pyx_n_s_char); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
-  __pyx_codeobj_ = (PyObject*)__Pyx_PyCode_New(2, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__5, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aiocsv__parser_pyx, __pyx_n_s_parser, 59, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj_)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_codeobj_ = (PyObject*)__Pyx_PyCode_New(2, 0, 10, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__5, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aiocsv__parser_pyx, __pyx_n_s_parser, 59, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj_)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -3832,7 +3949,7 @@ if (!__Pyx_RefNanny) {
  * 
  * DEF READ_SIZE = 2048
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_csv, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_csv, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_csv, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
