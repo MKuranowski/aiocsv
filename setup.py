@@ -29,7 +29,7 @@ setup(
     packages=find_packages(include=["aiocsv"]),
     zip_safe=False,
     license="MIT",
-    version="1.2.0",
+    version="1.2.1",
     description="Asynchronous CSV reading/writing",
     long_description=readme,
     long_description_content_type="text/markdown",
