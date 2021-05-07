@@ -27,7 +27,7 @@ class AsyncReader:
 
     @property
     def line_num(self) -> int:
-        warn("aiocsv doesn't supper the line_num attribute on readers")
+        warn("aiocsv doesn't support the line_num attribute on readers")
         return -1
 
     def __aiter__(self):
