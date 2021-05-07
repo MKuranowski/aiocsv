@@ -1,5 +1,6 @@
 language: python
 python:
+  - 3.6
   - 3.7
   - 3.8
   - 3.9
@@ -59,3 +60,5 @@ jobs:
 env:
   global:
     - TWINE_USERNAME=__token__
+    - CIBW_ARCHS=auto64
+    - CIBW_BUILD=cp3*-*
