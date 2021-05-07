@@ -22,7 +22,7 @@ script:
 stages:
   - test
   - name: deploy
-    if: tag IS PRESENT AND branch = master AND repo = MKuranowski/aiocsv
+    if: tag IS PRESENT AND branch = master
 
 jobs:
   include:
