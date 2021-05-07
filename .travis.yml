@@ -1,10 +1,61 @@
 language: python
 python:
-  - "3.7"
-  - "3.8"
-  - "3.9"
+  - 3.7
+  - 3.8
+  - 3.9
+
+before_install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" = windows ]]; then
+        choco upgrade python -y --version 3.9.5
+        export PATH="/c/Python39:/c/Python39/Scripts:$PATH"
+        ln -s /c/Python39/python.exe /c/Python39/python3.exe
+    fi
+
 install:
-  - pip install -U -r dev_requirements.txt
-  - pip install -e .
+  - python3 -m pip install -U -r dev_requirements.txt
+
 script:
-  - python -m pytest .
+  - python3 setup.py install
+  - pytest
+
+stages:
+  - test
+  - name: deploy
+    if: tag IS PRESENT AND branch = master AND repo = MKuranowski/aiocsv
+
+jobs:
+  include:
+    - stage: deploy
+      name: Linux wheels
+      services: docker
+      install: python3 -m pip install cibuildwheel
+      script: python3 -m cibuildwheel --output-dir wheelhouse
+      after_success: |
+        python3 -m pip install twine
+        python3 -m twine upload --skip-existing wheelhouse/*.whl
+
+    # Deploy on mac
+    - stage: deploy
+      name: MacOS Wheels
+      os: osx
+      language: shell
+      install: python3 -m pip install cibuildwheel
+      script: python3 -m cibuildwheel --output-dir wheelhouse
+      after_success: |
+        python3 -m pip install twine
+        python3 -m twine upload --skip-existing wheelhouse/*.whl
+
+    # Deploy on windows
+    - stage: deploy
+      name: Build and deploy Windows wheels
+      os: windows
+      language: shell
+      install: python3 -m pip install cibuildwheel
+      script: python3 -m cibuildwheel --output-dir wheelhouse
+      after_success: |
+        python3 -m pip install twine
+        python3 -m twine upload --skip-existing wheelhouse/*.whl
+env:
+  global:
+    - TWINE_USERNAME=__token__
