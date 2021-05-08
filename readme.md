@@ -11,21 +11,17 @@ Python 3.6+ is required.
 
 ## Usage
 
-All aiocsv classes behave (almost, see below) like their synchronous counterparts from the [csv module](https://docs.python.org/3/library/csv.html) -
-after all aiocsv is only a wrapper around the synchronous objects.
-
-The only different behavior is in newline handling. Since aiocsv buffers files row-by-row,
-underlaying streams **must** be opened with `newline=""` and **must** use the same line terminators
-as defined by [Dialect.lineterminator (default: CRLF)](https://docs.python.org/3/library/csv.html#csv.Dialect.lineterminator).
-The built-in csv mosule usually handles mismatched newlies ok-ish, whereas aiocsv will most likely break. 
-
 AsyncReader & AsyncDictReader accept any object that has a `read(size: int)` coroutine,
 which should return a string.
 
 AsyncWriter & AsyncDictWriter accept any object that has a `write(b: str)` coroutine.
 
-All objects in `aiocsv` pass keyword arguments to the underlying
-csv.reader/csv.writer/... instances.
+Reading is implemented using a custom CSV parser, which should behave exactly like the CPython parser.
+
+Writing is implemented using the synchronous csv.writer and csv.DictWriter objects - 
+the serializers write data to a StringIO, and that buffer is then rewritten to the underlaying
+asynchronous file.
+
 
 ## Example
 
@@ -70,65 +66,69 @@ async def main():
 asyncio.run(main())
 ```
 
-## Caching
-
-AsyncReader / AsyncDictReader will read a set amount of bytes from the provided stream,
-cache it in a io.StringIO. This StringIO is then consumed by the
-underlying csv.reader / csv.DictReader instances.
-
-By default 1024 bytees are read from the stream,
-you can change this value by setting `aiocsv.READ_SIZE`.
-
-
-AsyncWriter / AsyncDictWriter will follow provided row(s) to their
-underlying csv.writer / csv.DictWriter instances.
-They output produced CSV rows into a io.StringIO, which is then rewritten to the actual stream.
-
 
 ## Reference
 
 
 ### aiocsv.AsyncReader
-`AsyncReader(asyncfile: aiocsv._WithAsyncRead, **csvreaderparams)`
+`AsyncReader(asyncfile: aiocsv.protocols.WithAsyncRead, **csvreaderparams)`
 
 An object that iterates over lines in given asynchronous file.  
-Additional keyword arguments are passed to the underlying csv.reader instance.
+Additional keyword arguments are understood as dialect parameters.
 
 Iterating over this object returns parsed CSV rows (`List[str]`).
 
 *Methods*:
 - `__aiter__(self) -> self`
 - `async __anext__(self) -> List[str]`
-- `__init__(self, asyncfile: aiocsv._WithAsyncRead, **csvreaderparams) -> None`
 
-*Readonly properties*:
-- `dialect`: Link to underlying's csv.reader's `dialect` attribute
-- `line_num`: Link to underlying's csv.reader's `line_num` attribute
+*Properties*:
+- `dialect`: The csv.Dialect used when parsing
+
+*Read-only properties*:
+- `line_num`: Not implemented in aiocsv - issues a warning and always returns -1.
 
 
 ### aiocsv.AsyncDictReader
-`AsyncDictReader(asyncfile: aiocsv._WithAsyncRead, **csvdictreaderparams)`
+```
+AsyncDictReader(asyncfile: aiocsv.protocols.WithAsyncRead,
+                fieldnames: Optional[Sequence[str]] = None, restkey: Optional[str] = None, restval: Optional[str] = None, **csvreaderparams)
+```
 
 An object that iterates over lines in given asynchronous file.  
-Additional keyword arguments are passed to the underlying csv.DictReader instance.
-
-If given csv file has no header, provide a 'fieldnames' keyword argument,  
-like you would to csv.DictReader.
+All arguments work exactly the same like in csv.DictReader.
 
 Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
 
 *Methods*:
 - `__aiter__(self) -> self`
 - `async __anext__(self) -> Dict[str, str]`
-- `__init__(self, asyncfile: aiocsv._WithAsyncRead, **csvdictreaderparams) -> None`
 
-*Readonly properties*:
-- `dialect`: Link to underlying's csv.reader's `dialect` attribute
-- `line_num`: Link to underlying's csv.reader's `line_num` attribute
+*Properties*:
+- `fieldnames`: field names used when converting rows to dictionaries  
+    **⚠️** Unlike csv.DictReader, if not provided in the constructor, at least one row has to be retrieved before getting the fieldnames.
+    ```py
+    reader = csv.DictReader(some_file)
+    reader.fieldnames  # ["cells", "from", "the", "header"]
+
+    areader = aiofiles.AsyncDictReader(same_file_but_async)
+    areader.fieldnames   # ⚠️ None
+    await areader.__anext__()
+    areader.fieldnames  # ["cells", "from", "the", "header"]
+    ```
+- `restkey`: If a row has more cells then the header, all remaining cells are stored under
+  this key in the returned dictionary. Defaults to `None`.
+- `restval`: If a row has less cells then the header, then missing keys will use this
+  value. Defaults to `None`.
+- `reader`: Underlaying `aiofiles.AsyncReader` instance
+
+*Read-only properties*:
+- `dialect`: Link to `self.reader.dialect` - the current csv.Dialect
+- `line_num`: Not implemented in aiocsv - issues a warning and always returns -1
 
 
 ### aiocsv.AsyncWriter
-`AsyncWriter(asyncfile: aiocsv._WithAsyncWrite, **csvwriterparams)`
+`AsyncWriter(asyncfile: aiocsv.protocols.WithAsyncWrite, **csvwriterparams)`
 
 An object that writes csv rows to the given asynchronous file.  
 In this object "row" is a sequence of values.
@@ -136,7 +136,6 @@ In this object "row" is a sequence of values.
 Additional keyword arguments are passed to the underlying csv.writer instance.
 
 *Methods*:
-- `__init__(self, asyncfile: aiocsv._WithAsyncWrite, **csvwriterparams) -> None`
 - `async writerow(self, row: Iterable[Any]) -> None`  
     Writes one row to the specified file.
 
@@ -151,7 +150,7 @@ Additional keyword arguments are passed to the underlying csv.writer instance.
 
 
 ### aiocsv.AsyncDictWriter
-`AsyncDictWriter(asyncfile: aiocsv._WithAsyncWrite, fieldnames: Sequence[str], **csvdictwriterparams)`
+`AsyncDictWriter(asyncfile: aiocsv.protocols.WithAsyncWrite, fieldnames: Sequence[str], **csvdictwriterparams)`
 
 An object that writes csv rows to the given asynchronous file.  
 In this object "row" is a mapping from fieldnames to values.
@@ -159,7 +158,6 @@ In this object "row" is a mapping from fieldnames to values.
 Additional keyword arguments are passed to the underlying csv.DictWriter instance.
 
 *Methods*:
--  ``__init__(self, asyncfile: aiocsv._WithAsyncWrite, fieldnames: Sequence[str], **csvdictwriterparams) -> None``
 - `async writeheader(self) -> None`  
     Writes header row to the specified file.
 
@@ -176,14 +174,9 @@ Additional keyword arguments are passed to the underlying csv.DictWriter instanc
 - `dialect`: Link to underlying's csv.reader's `dialect` attribute
 
 
-### aiocsv.READ_SIZE
-(`int`); Amout of bytes to be read when consuming streams in Reader instances.
-
-
-
-### aiocsv._WithAsyncRead
+### aiocsv.protocols.WithAsyncRead
 A `typing.Protocol` describing an asynchronous file, which can be read.
 
 
-### aiocsv._WithAsyncWrite
+### aiocsv.protocols.WithAsyncWrite
 A `typing.Protocol` describing an asynchronous file, which can be written to.
