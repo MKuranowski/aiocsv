@@ -1,5 +1,6 @@
 from tempfile import NamedTemporaryFile
 import aiofiles
+import aiohttp
 import pytest
 import csv
 import os
@@ -7,6 +8,8 @@ import os
 from aiocsv import AsyncDictReader, AsyncDictWriter
 
 FILENAME = "tests/metro_systems.tsv"
+REMOTE_FILENAME = "https://raw.githubusercontent.com/" \
+                  "MKuranowski/aiocsv/master/{}".format(FILENAME)
 PARAMS = {"delimiter": "\t", "quotechar": "'", "quoting": csv.QUOTE_ALL}
 HEADER = ["City", "Stations", "System Length"]
 VALUES = [dict(zip(HEADER, i)) for i in [
@@ -24,6 +27,14 @@ async def test_dict_read():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
         read_rows = [i async for i in AsyncDictReader(afp, **PARAMS)]
         assert read_rows == VALUES
+
+
+@pytest.mark.asyncio
+async def test_dict_network_read():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(REMOTE_FILENAME) as response:
+            read_rows = [i async for i in AsyncDictReader(response.content, **PARAMS)]
+            assert read_rows == VALUES
 
 
 @pytest.mark.asyncio

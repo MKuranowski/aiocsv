@@ -1,11 +1,14 @@
 from tempfile import NamedTemporaryFile
 import aiofiles
+import aiohttp
 import pytest
 import os
 
 from aiocsv import AsyncReader, AsyncWriter
 
 FILENAME = "tests/eu_cities_unix.csv"
+REMOTE_FILENAME = "https://raw.githubusercontent.com/" \
+                  "MKuranowski/aiocsv/master/{}".format(FILENAME)
 PARAMS = {"dialect": "unix"}
 VALUES = [
     ["Berlin", "Germany"],
@@ -21,6 +24,14 @@ async def test_dialect_read():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
         read_rows = [i async for i in AsyncReader(afp, **PARAMS)]
         assert read_rows == VALUES
+
+
+@pytest.mark.asyncio
+async def test_dialect_network_read():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(REMOTE_FILENAME) as response:
+            read_rows = [i async for i in AsyncReader(response.content, **PARAMS)]
+            assert read_rows == VALUES
 
 
 @pytest.mark.asyncio

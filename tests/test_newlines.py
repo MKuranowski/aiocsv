@@ -1,10 +1,13 @@
 import aiofiles
+import aiohttp
 import pytest
 
 from aiocsv import AsyncDictReader, AsyncReader
 
 DIALECT_PARAMS = {"escapechar": "$", "lineterminator": "\n"}
 FILENAME = "tests/newlines.csv"
+REMOTE_FILENAME = "https://raw.githubusercontent.com/" \
+                  "MKuranowski/aiocsv/master/{}".format(FILENAME)
 HEADER = ["field1", "field2", "field3"]
 READ_VALUES = [
     ["hello", 'is it "me"', "you're\nlooking for"],
@@ -18,6 +21,14 @@ async def test_newline_read():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as af:
         read_rows = [i async for i in AsyncReader(af, **DIALECT_PARAMS)]
         assert read_rows == [HEADER] + READ_VALUES
+
+
+@pytest.mark.asyncio
+async def test_newline_network_read():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(REMOTE_FILENAME) as response:
+            read_rows = [i async for i in AsyncReader(response.content, **DIALECT_PARAMS)]
+            assert read_rows == [HEADER] + READ_VALUES
 
 
 @pytest.mark.asyncio
