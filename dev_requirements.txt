@@ -1,4 +1,5 @@
 aiofiles
+aiohttp
 pytest
 pytest-asyncio
 typing-extensions;python_version<='3.7'
