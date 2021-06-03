@@ -57,7 +57,7 @@ cdef CDialect get_dialect(object pydialect):
 
 
 async def parser(reader, pydialect):
-    cdef unicode data = <unicode?>(await reader.read(READ_SIZE))
+    cdef unicode data
     cdef CDialect dialect = get_dialect(pydialect)
 
     cdef ParserState state = ParserState.AFTER_DELIM
@@ -67,6 +67,11 @@ async def parser(reader, pydialect):
     cdef bint force_save_cell = False
     cdef bint numeric_cell = False
     cdef Py_UCS4 char
+
+    res = await reader.read(READ_SIZE)
+    if isinstance(res, bytes):
+        res = res.decode()
+    data = <unicode?>res
 
     # Iterate while the reader gives out data
     while data:
@@ -213,7 +218,10 @@ async def parser(reader, pydialect):
                 raise RuntimeError("wtf")
 
         # Read more data
-        data = <unicode?>(await reader.read(READ_SIZE))
+        res = await reader.read(READ_SIZE)
+        if isinstance(res, bytes):
+            res = res.decode()
+        data = <unicode?>res
 
     if cell or force_save_cell:
         row.append(float(cell) if numeric_cell else cell)
