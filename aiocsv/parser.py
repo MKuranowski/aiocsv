@@ -23,6 +23,8 @@ async def parser(reader: WithAsyncRead, dialect: csv.Dialect) -> AsyncIterator[L
     state: ParserState = ParserState.AFTER_DELIM
 
     data = await reader.read(READ_SIZE)
+    if isinstance(data, bytes):
+        data = data.decode()
     if not isinstance(data, str):
         raise TypeError("file wasn't opened in text mode")
 
@@ -177,6 +179,8 @@ async def parser(reader: WithAsyncRead, dialect: csv.Dialect) -> AsyncIterator[L
 
         # Read more data
         data = await reader.read(READ_SIZE)
+        if isinstance(data, bytes):
+            data = data.decode()
         if not isinstance(data, str):
             raise TypeError("file wasn't opened in text mode")
 
