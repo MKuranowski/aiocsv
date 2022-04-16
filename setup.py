@@ -27,6 +27,7 @@ setup(
     py_modules=["aiocsv"],
     ext_modules=extensions,
     packages=find_packages(include=["aiocsv"]),
+    package_data={"aiocsv": ["py.typed", "_parser.pyi"]},
     zip_safe=False,
     license="MIT",
     version="1.2.1",
