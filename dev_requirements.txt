@@ -1,6 +1,0 @@
-aiofiles
-pytest
-pytest-asyncio
-typing-extensions;python_version<='3.7'
-setuptools
-wheel
