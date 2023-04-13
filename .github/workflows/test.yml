@@ -18,4 +18,4 @@ jobs:
     - name: Install the library
       run: python3 setup.py install
     - name: Run tests
-      run: python -m pytest
+      run: pytest
