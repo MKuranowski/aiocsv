@@ -3,6 +3,7 @@ import aiofiles
 import pytest
 import csv
 import os
+from functools import reduce
 
 from aiocsv import AsyncDictReader, AsyncDictWriter
 
@@ -16,7 +17,7 @@ VALUES = [dict(zip(HEADER, i)) for i in [
     ["Beijing", "326", "690"],
     ["Paris", "302", "214"],
     ["London", "270", "402"],
-]]
+    ]]
 
 
 @pytest.mark.asyncio
@@ -24,6 +25,38 @@ async def test_dict_read():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
         read_rows = [i async for i in AsyncDictReader(afp, **PARAMS)]
         assert read_rows == VALUES
+
+
+@pytest.mark.asyncio
+async def test_dict_read_filter_rows():
+    # Set filters for the rows to keep
+    rowfilters = [
+        lambda row: row["City"] == "Paris",
+        lambda row: int(row["Stations"]) > 400,
+        lambda row: row["System Length"][-1] == "0"
+        ]
+    async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
+        read_rows = [
+            i async for i in AsyncDictReader(afp, rowfilters=rowfilters, **PARAMS)
+            ]
+        result_cities = [row["City"] for row in read_rows]
+        expected_cities = ["New York", "Beijing", "Paris"]
+        assert result_cities == expected_cities
+
+
+@pytest.mark.asyncio
+async def test_dict_read_filter_columns():
+    # Set filters for the rows to keep
+    colfilters = [lambda fieldname: "y" in fieldname, ]
+    async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
+        read_rows = [
+            i async for i in AsyncDictReader(afp, colfilters=colfilters, **PARAMS)
+            ]
+        unique_fieldnames_in_result = reduce(
+            lambda set1, set2: set1.union(set2), (set(row.keys()) for row in read_rows)
+            )
+        expected_fieldnames = {"City", "System Length"}
+        assert unique_fieldnames_in_result == expected_fieldnames
 
 
 @pytest.mark.asyncio

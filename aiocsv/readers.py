@@ -1,6 +1,6 @@
 import csv
 from warnings import warn
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Callable
 from .protocols import WithAsyncRead
 
 try:
@@ -46,12 +46,29 @@ class AsyncDictReader:
     """
     def __init__(self, asyncfile: WithAsyncRead, fieldnames: Optional[Sequence[str]] = None,
                  restkey: Optional[str] = None, restval: Optional[str] = None,
+                 colfilters: Optional[List[Callable]] = None,
+                 rowfilters: Optional[List[Callable]] = None,
                  **csvreaderparams) -> None:
-
-        self.fieldnames: Optional[List[str]] = list(fieldnames) if fieldnames else None
+        """Initialize AsyncDictReader instance.
+        Args:
+            asyncfile (WithAsyncRead): asynchronous file object.
+            fieldnames (Optional[Sequence[str]]): field names to be used if given
+                csv file has no header (used like in csv.DictReader).
+            restkey (Optional[str]): passed to csv.DictReader.
+            restval (Optional[str]): passed to csv.DictReader.
+            colfilters (Optional[List[Callable]]): list of functions that filter
+                columns. Multiple functions will be treated as OR.
+            colvalues (Optional[List[Callable]]): list of functions that filter
+                rows. Multiple functions will be treated as OR.
+            **csvreaderparams: additional keyword arguments passed to the underlying
+                csv.DictReader instance.
+        """
+        self.fieldnames: Optional[List[str]] = fieldnames if fieldnames else None
         self.restkey: Optional[str] = restkey
         self.restval: Optional[str] = restval
         self.reader = AsyncReader(asyncfile, **csvreaderparams)
+        self.colfilters: Optional[List[Callable]] = colfilters
+        self.rowfilters: Optional[List[Callable]] = rowfilters
 
     @property
     def dialect(self) -> csv.Dialect:
@@ -71,11 +88,21 @@ class AsyncDictReader:
 
         # skip empty rows
         cells = await self.reader.__anext__()
-        while not cells:
-            cells = await self.reader.__anext__()
 
-        # join the header with the row
-        row = dict(zip(self.fieldnames, cells))
+        if self.rowfilters:
+            while True:
+                if not cells:
+                    cells = await self.reader.__anext__()
+                    continue
+                row = self._join_header(cells)
+                if any(rowfilter(row) for rowfilter in self.rowfilters):
+                    break
+                cells = await self.reader.__anext__()
+
+        else:
+            while not cells:
+                cells = await self.reader.__anext__()
+            row = self._join_header(cells)
 
         len_header = len(self.fieldnames)
         len_cells = len(cells)
@@ -87,4 +114,17 @@ class AsyncDictReader:
             for k in self.fieldnames[len_cells:]:
                 row[k] = self.restval  # type: ignore
 
+        if self.colfilters:
+            # only include columns that pass the filter
+            include_fieldnames = {
+                fieldname for fieldname in self.fieldnames
+                if any(colfilter(fieldname) for colfilter in self.colfilters)
+                }
+            row = {k: v for k, v in row.items() if k in include_fieldnames}
+
+        return row
+
+    def _join_header(self, cells: List[str]) -> Dict[str, str]:
+        """Joins the header with the row."""
+        row = dict(zip(self.fieldnames, cells))
         return row
