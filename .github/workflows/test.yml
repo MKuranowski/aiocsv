@@ -16,6 +16,6 @@ jobs:
     - name: Install dependencies
       run: pip install -Ur requirements.dev.txt
     - name: Install the library
-      run: python3 setup.py install
+      run: pip install -e .
     - name: Run tests
       run: pytest
