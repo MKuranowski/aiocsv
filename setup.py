@@ -30,7 +30,7 @@ setup(
     package_data={"aiocsv": ["py.typed", "_parser.pyi"]},
     zip_safe=False,
     license="MIT",
-    version="1.2.4",
+    version="1.2.5",
     description="Asynchronous CSV reading/writing",
     long_description=readme,
     long_description_content_type="text/markdown",
