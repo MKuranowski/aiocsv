@@ -3,16 +3,14 @@ import pytest
 import csv
 import io
 
-# from aiocsv._parser import parser as fast_parser
+from aiocsv._parser import parser as fast_parser
 from aiocsv.parser import parser as py_parser
 from aiocsv.protocols import WithAsyncRead
 
 Parser = Callable[[WithAsyncRead, csv.Dialect], AsyncIterator[List[str]]]
 
-# PARSERS: List[Parser] = [fast_parser, py_parser]
-# PARSER_NAMES: List[str] = ["fast_cython_parser", "pure_python_parser"]
-PARSERS: List[Parser] = [py_parser]
-PARSER_NAMES: List[str] = ["pure_python_parser"]
+PARSERS: List[Parser] = [fast_parser, py_parser]
+PARSER_NAMES: List[str] = ["fast_cython_parser", "pure_python_parser"]
 
 
 class AsyncStringIO:

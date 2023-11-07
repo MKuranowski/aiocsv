@@ -13,3 +13,14 @@ class WithAsyncWrite(Protocol):
 
 class WithAsyncRead(Protocol):
     async def read(self, __size: int) -> Union[str, bytes]: ...
+
+
+class DialectLike(Protocol):
+    delimiter: str
+    quotechar: str | None
+    escapechar: str | None
+    doublequote: bool
+    skipinitialspace: bool
+    lineterminator: str
+    quoting: int
+    strict: bool
