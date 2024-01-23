@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 import sys
 
 if sys.version_info < (3, 8):
@@ -12,7 +12,7 @@ class WithAsyncWrite(Protocol):
 
 
 class WithAsyncRead(Protocol):
-    async def read(self, __size: int) -> Union[str, bytes]: ...
+    async def read(self, __size: int) -> str: ...
 
 
 class DialectLike(Protocol):
@@ -21,6 +21,5 @@ class DialectLike(Protocol):
     escapechar: str | None
     doublequote: bool
     skipinitialspace: bool
-    lineterminator: str
     quoting: int
     strict: bool

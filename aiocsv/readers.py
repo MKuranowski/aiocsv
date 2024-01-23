@@ -3,11 +3,7 @@ from warnings import warn
 from typing import Dict, List, Optional, Sequence
 from .protocols import WithAsyncRead
 
-try:
-    from ._parser import parser
-except ImportError:
-    warn("Using a slow, pure-python CSV parser")
-    from .parser import parser
+from .parser import Parser
 
 
 class AsyncReader:
@@ -23,7 +19,7 @@ class AsyncReader:
         # this shit works, just let `csv` figure the dialects out.
         self.dialect = csv.reader("", **csvreaderparams).dialect
 
-        self._parser = parser(self._file, self.dialect)
+        self._parser = Parser(self._file, self.dialect)
 
     @property
     def line_num(self) -> int:

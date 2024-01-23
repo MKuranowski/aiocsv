@@ -3,14 +3,13 @@ import pytest
 import csv
 import io
 
-from aiocsv._parser import parser as fast_parser
-from aiocsv.parser import parser as py_parser
+from aiocsv.parser import Parser as PyParser
 from aiocsv.protocols import WithAsyncRead
 
 Parser = Callable[[WithAsyncRead, csv.Dialect], AsyncIterator[List[str]]]
 
-PARSERS: List[Parser] = [fast_parser, py_parser]
-PARSER_NAMES: List[str] = ["fast_cython_parser", "pure_python_parser"]
+PARSERS: List[Parser] = [PyParser]
+PARSER_NAMES: List[str] = ["pure_python_parser"]
 
 
 class AsyncStringIO:
@@ -164,3 +163,6 @@ async def test_parsing_weird_quotes_nonnumeric(parser: Parser):
     assert custom_result == [
         [3.0, ""], ["1.5", "15"], ["2", "-4.5"], [-5.2, -11.0]
     ]
+
+# TODO: Test QUOTE_STRINGS and QUOTE_NOTNULL
+# TODO: Test what happens on escapechar in QUOTE_IN_QUOTED state
