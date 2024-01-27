@@ -6,8 +6,8 @@ from .protocols import DialectLike, WithAsyncRead
 
 
 class ParserState(IntEnum):
-    AFTER_RECORD = auto()
-    AFTER_DELIMITER = auto()
+    START_RECORD = auto()
+    START_FIELD = auto()
     IN_FIELD = auto()
     ESCAPE = auto()
     IN_QUOTED_FIELD = auto()
@@ -38,10 +38,9 @@ class Parser:
         self.buffer: str = ""
         self.eof: bool = False
 
-        self.state = ParserState.AFTER_RECORD
+        self.state = ParserState.START_RECORD
         self.record_so_far: list[str] = []
         self.field_so_far: list[str] = []
-        self.field_was_quoted: bool = False
         self.field_was_numeric: bool = False
 
     # AsyncIterator[list[str]] interface
@@ -96,7 +95,7 @@ class Parser:
         decision = Decision.CONTINUE
 
         while decision is not Decision.DONE and self.buffer:
-            decision = self.advance()
+            decision = self.process_char(self.buffer[0])
             if decision is Decision.CONTINUE:
                 self.buffer = self.buffer[1:]
 
@@ -106,73 +105,72 @@ class Parser:
         else:
             return None
 
-    def advance(self) -> Decision:
-        c = self.buffer[0]
+    def process_char(self, c: str) -> Decision:
         match self.state:
-            case ParserState.AFTER_RECORD:
-                return self.advance_after_record(c)
-            case ParserState.AFTER_DELIMITER:
-                return self.advance_after_delimiter(c)
-            case ParserState.IN_FIELD:
-                return self.advance_in_field(c)
+            case ParserState.START_RECORD:
+                return self.process_char_in_start_record(c)
+            case ParserState.START_FIELD:
+                return self.process_char_in_start_field(c)
             case ParserState.ESCAPE:
-                return self.advance_escape(c)
+                return self.process_char_in_escape(c)
+            case ParserState.IN_FIELD:
+                return self.process_char_in_field(c)
             case ParserState.IN_QUOTED_FIELD:
-                return self.advance_in_quoted_field(c)
+                return self.process_char_in_quoted_field(c)
             case ParserState.ESCAPE_IN_QUOTED:
-                return self.advance_escape_in_quoted(c)
+                return self.process_char_in_escape_in_quoted(c)
             case ParserState.QUOTE_IN_QUOTED:
-                return self.advance_quote_in_quoted(c)
+                return self.process_char_in_quote_in_quoted(c)
             case ParserState.EAT_NEWLINE:
-                return self.advance_eat_newline(c)
+                return self.process_char_in_eat_newline(c)
 
-    def advance_after_record(self, c: str) -> Decision:
+    def process_char_in_start_record(self, c: str) -> Decision:
         match c:
             case "\r" | "\n":
                 self.state = ParserState.EAT_NEWLINE
                 return Decision.CONTINUE
             case _:
-                return self.advance_after_delimiter(c)
+                return self.process_char_in_start_field(c)
 
-    def advance_after_delimiter(self, c: str) -> Decision:
+    def process_char_in_start_field(self, c: str) -> Decision:
         match c:
             case "\r" | "\n":
-                self.add_field()
+                self.save_field()
                 self.state = ParserState.EAT_NEWLINE
             case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
-                self.field_was_quoted = True
                 self.state = ParserState.IN_QUOTED_FIELD
             case self.dialect.escapechar:
                 self.state = ParserState.ESCAPE
+            # XXX: skipinitialspace handling is done in save_field()
             case self.dialect.delimiter:
-                self.add_field()
-                self.state = ParserState.AFTER_DELIMITER
+                self.save_field()
+                self.state = ParserState.START_FIELD
             case _:
                 self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
-                self.field_so_far.append(c)
+                self.add_char(c)
                 self.state = ParserState.IN_FIELD
         return Decision.CONTINUE
 
-    def advance_in_field(self, c: str) -> Decision:
+    def process_char_in_escape(self, c: str) -> Decision:
+        self.add_char(c)
+        self.state = ParserState.IN_FIELD
+        return Decision.CONTINUE
+
+    def process_char_in_field(self, c: str) -> Decision:
         match c:
             case "\r" | "\n":
-                self.add_field()
+                self.save_field()
                 self.state = ParserState.EAT_NEWLINE
             case self.dialect.escapechar:
                 self.state = ParserState.ESCAPE
             case self.dialect.delimiter:
-                self.add_field()
-                self.state = ParserState.AFTER_DELIMITER
+                self.save_field()
+                self.state = ParserState.START_FIELD
             case _:
-                self.field_so_far.append(c)
+                self.add_char(c)
         return Decision.CONTINUE
 
-    def advance_escape(self, c: str) -> Decision:
-        self.field_so_far.append(c)
-        self.state = ParserState.IN_FIELD
-        return Decision.CONTINUE
-
-    def advance_in_quoted_field(self, c: str) -> Decision:
+    def process_char_in_quoted_field(self, c: str) -> Decision:
         match c:
             case self.dialect.escapechar:
                 self.state = ParserState.ESCAPE_IN_QUOTED
@@ -182,27 +180,27 @@ class Parser:
                 else:
                     self.state = ParserState.IN_FIELD
             case _:
-                self.field_so_far.append(c)
+                self.add_char(c)
         return Decision.CONTINUE
 
-    def advance_escape_in_quoted(self, c: str) -> Decision:
-        self.field_so_far.append(c)
+    def process_char_in_escape_in_quoted(self, c: str) -> Decision:
+        self.add_char(c)
         self.state = ParserState.IN_QUOTED_FIELD
         return Decision.CONTINUE
 
-    def advance_quote_in_quoted(self, c: str) -> Decision:
+    def process_char_in_quote_in_quoted(self, c: str) -> Decision:
         match c:
             case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
-                self.field_so_far.append(c)  # type: ignore | wtf
+                self.add_char(c)  # type: ignore | wtf
                 self.state = ParserState.IN_QUOTED_FIELD
             case self.dialect.delimiter:
-                self.add_field()
-                self.state = ParserState.AFTER_DELIMITER
+                self.save_field()
+                self.state = ParserState.START_FIELD
             case "\r" | "\n":
-                self.add_field()
+                self.save_field()
                 self.state = ParserState.EAT_NEWLINE
             case _ if not self.dialect.strict:
-                self.field_so_far.append(c)
+                self.add_char(c)
                 self.state = ParserState.IN_FIELD
             case _:
                 raise csv.Error(
@@ -210,39 +208,37 @@ class Parser:
                 )
         return Decision.CONTINUE
 
-    def advance_eat_newline(self, c: str) -> Decision:
+    def process_char_in_eat_newline(self, c: str) -> Decision:
         match c:
             case "\r" | "\n":
                 return Decision.CONTINUE
             case _:
-                self.state = ParserState.AFTER_RECORD
+                self.state = ParserState.START_RECORD
                 return Decision.DONE
 
-    def add_field(self) -> None:
+    def add_char(self, c: str) -> None:
+        # TODO: Check against field_limit
+        self.field_so_far.append(c)
+
+    def save_field(self) -> None:
         field: str | float | None
         if self.dialect.skipinitialspace:
             field = "".join(self.field_so_far[self.find_first_non_space(self.field_so_far):])
         else:
             field = "".join(self.field_so_far)
 
-        # Convert the field depending on dialect.quoting and field_was_quoted:
-        # For QUOTE_NONNUMERIC: to float if not field_was_quoted
+        # Convert to float if QUOTE_NONNUMERIC
         if self.dialect.quoting == QUOTE_NONNUMERIC and field and self.field_was_numeric:
             self.field_was_numeric = False
             field = float(field)
-        # TODO: For QUOTE_NOTNULL: to None if len(field) == 0 and not field_was_quoted
-        # TODO: For QUOTE_STRINGS: to None if len(field) == 0 and not field_was_quoted,
-        #                    to float else if not field_was_quoted
-        # (No conversion otherwise)
 
         self.record_so_far.append(field)  # type: ignore
         self.field_so_far.clear()
-        self.field_was_quoted = False
 
     def add_field_at_eof(self) -> None:
         # Decide if self.record_so_far needs to be added at an EOF
-        if self.state not in (ParserState.AFTER_RECORD, ParserState.EAT_NEWLINE):
-            self.add_field()
+        if self.state not in (ParserState.START_RECORD, ParserState.EAT_NEWLINE):
+            self.save_field()
 
     def extract_record(self) -> list[str]:
         r = self.record_so_far.copy()

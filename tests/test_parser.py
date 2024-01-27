@@ -166,3 +166,7 @@ async def test_parsing_weird_quotes_nonnumeric(parser: Parser):
 
 # TODO: Test QUOTE_STRINGS and QUOTE_NOTNULL
 # TODO: Test what happens on escapechar in QUOTE_IN_QUOTED state
+# TODO: Test what happens when a single escapechar escapes "\r\n" - both in quoted and unquoted
+# TODO: Sequences "\r", "\n" and "\r\n" should all translate into "\n" (regardless if escaped).
+# TODO: Check "foo\r\n\r\nspam\r\n".
+# TODO: How to cause csv.Error("new-line character seen in unquoted field - ...")?
