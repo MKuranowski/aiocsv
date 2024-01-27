@@ -219,6 +219,3 @@ async def test_eating_newlines(parser: Parser):
 
     assert csv_result == expected_result
     assert custom_result == expected_result
-
-# TODO: Test QUOTE_STRINGS and QUOTE_NOTNULL
-# TODO: How to cause csv.Error("new-line character seen in unquoted field - ...")?
