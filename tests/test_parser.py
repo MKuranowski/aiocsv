@@ -178,8 +178,35 @@ async def test_parsing_escape_after_quote_in_quoted(parser: Parser):
     assert csv_result == expected_result
     assert custom_result == expected_result
 
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_escaped_crlf(parser: Parser):
+    data = 'foo$\r\nbar\r\n'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
+    csv_result = list(csv_parser)
+    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    expected_result = [["foo\r"], ["bar"]]
+
+    assert csv_result == expected_result
+    assert custom_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_escaped_crlf_in_quoted(parser: Parser):
+    data = '"foo$\r\n",bar\r\n'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
+    csv_result = list(csv_parser)
+    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    expected_result = [["foo\r\n", "bar"]]
+
+    assert csv_result == expected_result
+    assert custom_result == expected_result
+
 # TODO: Test QUOTE_STRINGS and QUOTE_NOTNULL
-# TODO: Test what happens when a single escapechar escapes "\r\n" - both in quoted and unquoted
 # TODO: Sequences "\r", "\n" and "\r\n" should all translate into "\n" (regardless if escaped).
 # TODO: Check "foo\r\n\r\nspam\r\n".
 # TODO: How to cause csv.Error("new-line character seen in unquoted field - ...")?
