@@ -206,7 +206,19 @@ async def test_escaped_crlf_in_quoted(parser: Parser):
     assert csv_result == expected_result
     assert custom_result == expected_result
 
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_eating_newlines(parser: Parser):
+    data = 'foo\r\rbar\n\rbaz\n\nspam\r\n\neggs'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
+    csv_result = list(csv_parser)
+    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    expected_result = [["foo"], [], ["bar"], [], ["baz"], [], ["spam"], [], ["eggs"]]
+
+    assert csv_result == expected_result
+    assert custom_result == expected_result
+
 # TODO: Test QUOTE_STRINGS and QUOTE_NOTNULL
-# TODO: Sequences "\r", "\n" and "\r\n" should all translate into "\n" (regardless if escaped).
-# TODO: Check "foo\r\n\r\nspam\r\n".
 # TODO: How to cause csv.Error("new-line character seen in unquoted field - ...")?
