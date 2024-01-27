@@ -181,7 +181,7 @@ async def test_parsing_escape_after_quote_in_quoted(parser: Parser):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_escaped_crlf(parser: Parser):
+async def test_parsing_escaped_crlf(parser: Parser):
     data = 'foo$\r\nbar\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
@@ -195,7 +195,7 @@ async def test_escaped_crlf(parser: Parser):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_escaped_crlf_in_quoted(parser: Parser):
+async def test_parsing_escaped_crlf_in_quoted(parser: Parser):
     data = '"foo$\r\n",bar\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
@@ -209,7 +209,7 @@ async def test_escaped_crlf_in_quoted(parser: Parser):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_eating_newlines(parser: Parser):
+async def test_parsing_consecutive_newlines(parser: Parser):
     data = 'foo\r\rbar\n\rbaz\n\nspam\r\n\neggs'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
