@@ -19,14 +19,13 @@ class ParserState(IntEnum):
 class Decision(IntEnum):
     CONTINUE = auto()
     DONE = auto()
+    DONE_WITHOUT_CONSUMING = auto()
 
 
 QUOTE_MINIMAL = csv.QUOTE_MINIMAL
 QUOTE_ALL = csv.QUOTE_ALL
 QUOTE_NONNUMERIC = csv.QUOTE_NONNUMERIC
 QUOTE_NONE = csv.QUOTE_NONE
-QUOTE_STRINGS: int = getattr(csv, "QUOTE_STRINGS", 4)
-QUOTE_NOTNULL: int = getattr(csv, "QUOTE_NOTNULL", 5)
 
 
 class Parser:
@@ -94,12 +93,12 @@ class Parser:
     def try_parse(self) -> list[str] | None:
         decision = Decision.CONTINUE
 
-        while decision is not Decision.DONE and self.buffer:
+        while decision is Decision.CONTINUE and self.buffer:
             decision = self.process_char(self.buffer[0])
-            if decision is Decision.CONTINUE:
+            if decision is not Decision.DONE_WITHOUT_CONSUMING:
                 self.buffer = self.buffer[1:]
 
-        if decision is Decision.DONE or self.eof:
+        if decision is not Decision.CONTINUE or (self.eof and self.state not in (ParserState.START_RECORD, ParserState.EAT_NEWLINE)):
             self.add_field_at_eof()
             return self.extract_record()
         else:
@@ -126,17 +125,24 @@ class Parser:
 
     def process_char_in_start_record(self, c: str) -> Decision:
         match c:
-            case "\r" | "\n":
+            case "\r":
                 self.state = ParserState.EAT_NEWLINE
                 return Decision.CONTINUE
+            case "\n":
+                self.state = ParserState.START_RECORD
+                return Decision.DONE
             case _:
                 return self.process_char_in_start_field(c)
 
     def process_char_in_start_field(self, c: str) -> Decision:
         match c:
-            case "\r" | "\n":
+            case "\r":
                 self.save_field()
                 self.state = ParserState.EAT_NEWLINE
+            case "\n":
+                self.save_field()
+                self.state = ParserState.START_RECORD
+                return Decision.DONE
             case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
                 self.state = ParserState.IN_QUOTED_FIELD
             case self.dialect.escapechar:
@@ -158,9 +164,13 @@ class Parser:
 
     def process_char_in_field(self, c: str) -> Decision:
         match c:
-            case "\r" | "\n":
+            case "\r":
                 self.save_field()
                 self.state = ParserState.EAT_NEWLINE
+            case "\n":
+                self.save_field()
+                self.state = ParserState.START_RECORD
+                return Decision.DONE
             case self.dialect.escapechar:
                 self.state = ParserState.ESCAPE
             case self.dialect.delimiter:
@@ -196,9 +206,13 @@ class Parser:
             case self.dialect.delimiter:
                 self.save_field()
                 self.state = ParserState.START_FIELD
-            case "\r" | "\n":
+            case "\r":
                 self.save_field()
                 self.state = ParserState.EAT_NEWLINE
+            case "\n":
+                self.save_field()
+                self.state = ParserState.START_RECORD
+                return Decision.DONE
             case _ if not self.dialect.strict:
                 self.add_char(c)
                 self.state = ParserState.IN_FIELD
@@ -209,12 +223,8 @@ class Parser:
         return Decision.CONTINUE
 
     def process_char_in_eat_newline(self, c: str) -> Decision:
-        match c:
-            case "\r" | "\n":
-                return Decision.CONTINUE
-            case _:
-                self.state = ParserState.START_RECORD
-                return Decision.DONE
+        self.state = ParserState.START_RECORD
+        return Decision.DONE if c == "\n" else Decision.DONE_WITHOUT_CONSUMING
 
     def add_char(self, c: str) -> None:
         # TODO: Check against field_limit
