@@ -36,11 +36,13 @@ class Parser:
         self.current_read: Generator[Any, None, str] | None = None
         self.buffer: str = ""
         self.eof: bool = False
+        self.line_num: int = 0
 
         self.state = ParserState.START_RECORD
         self.record_so_far: list[str] = []
         self.field_so_far: list[str] = []
         self.field_was_numeric: bool = False
+        self.last_char_was_cr: bool = False
 
     # AsyncIterator[list[str]] interface
 
@@ -94,7 +96,7 @@ class Parser:
         decision = Decision.CONTINUE
 
         while decision is Decision.CONTINUE and self.buffer:
-            decision = self.process_char(self.buffer[0])
+            decision = self.process_char(self.get_char_and_increment_line_num())
             if decision is not Decision.DONE_WITHOUT_CONSUMING:
                 self.buffer = self.buffer[1:]
 
@@ -254,6 +256,20 @@ class Parser:
         r = self.record_so_far.copy()
         self.record_so_far.clear()
         return r
+
+    def get_char_and_increment_line_num(self) -> str:
+        c = self.buffer[0]
+        if c == "\r":
+            self.line_num += 1
+            self.last_char_was_cr = True
+        elif c == "\n":
+            if self.last_char_was_cr:
+                self.last_char_was_cr = False
+            else:
+                self.line_num += 1
+        else:
+            self.last_char_was_cr = False
+        return c
 
     @staticmethod
     def find_first_non_space(x: Sequence[str]) -> int:
