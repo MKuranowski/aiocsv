@@ -187,6 +187,7 @@ class Parser:
             case self.dialect.escapechar:
                 self.state = ParserState.ESCAPE_IN_QUOTED
             case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
+                # XXX: Is this check for quoting necessary?
                 if self.dialect.doublequote:
                     self.state = ParserState.QUOTE_IN_QUOTED
                 else:
@@ -203,6 +204,7 @@ class Parser:
     def process_char_in_quote_in_quoted(self, c: str) -> Decision:
         match c:
             case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
+                # XXX: Is this check for quoting necessary?
                 self.add_char(c)  # type: ignore | wtf
                 self.state = ParserState.IN_QUOTED_FIELD
             case self.dialect.delimiter:

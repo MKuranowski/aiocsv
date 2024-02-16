@@ -5,6 +5,7 @@ import io
 import sys
 
 from aiocsv.parser import Parser as PyParser
+from aiocsv._parser import Parser as CParser
 from aiocsv.protocols import WithAsyncRead, DialectLike
 
 if sys.version_info < (3, 8):
@@ -20,8 +21,8 @@ class Parser(Protocol):
     def __aiter__(self) -> AsyncIterator[List[str]]: ...
 
 
-PARSERS: List[Type[Parser]] = [PyParser]
-PARSER_NAMES: List[str] = ["pure_python_parser"]
+PARSERS: List[Type[Parser]] = [PyParser, CParser]
+PARSER_NAMES: List[str] = ["pure_python_parser", "c_parser"]
 
 
 class AsyncStringIO:
