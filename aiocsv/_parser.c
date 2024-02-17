@@ -7,6 +7,48 @@
 #include <Python.h>
 #include <structmember.h>
 
+#define FINISH_WITH(new_result) \
+    do {                        \
+        result = (new_result);  \
+        goto ret;               \
+    } while (0)
+
+typedef struct {
+    /// csv.Error exception class
+    PyObject* csv_error;
+
+    /// csv.field_size_limit `() -> int` function
+    PyObject* csv_field_size_limit;
+
+    /// io.DEFAULT_BUFFER_SIZE number
+    long io_default_buffer_size;
+
+    /// Parser class exposed by this module
+    PyTypeObject* parser_type;
+} ModuleState;
+
+#define module_get_state(m) ((ModuleState*)PyModule_GetState(m))
+
+static int module_clear(PyObject* module) {
+    ModuleState* state = module_get_state(module);
+    if (state) {
+        Py_CLEAR(state->csv_error);
+        Py_CLEAR(state->csv_field_size_limit);
+    }
+    return 0;
+}
+
+static int module_traverse(PyObject* module, visitproc visit, void* arg) {
+    ModuleState* state = module_get_state(module);
+    if (state) {
+        Py_VISIT(state->csv_error);
+        Py_VISIT(state->csv_field_size_limit);
+    }
+    return 0;
+}
+
+static void module_free(void* module) { module_clear((PyObject*)module); }
+
 // Parser implements the outer AsyncIterator[List[str]] protocol (__aiter__ + __anext__),
 // but, to avoid allocating new object on each call to __anext__, Parser returns itself from
 // __anext__. So, Parser also implements Awaitable[list[str]] (which also returns itself) and
@@ -159,6 +201,12 @@ typedef struct {
     // clang-format off
     PyObject_HEAD
 
+    /// Pointer to the _parser module. Required for 3.8 compatibility.
+    ///
+    /// TODO: Drop field once support for 3.8 is dropped.
+    ///       PyType_GetModuleState(Py_TYPE(self)) should be used instead.
+    PyObject* module;
+
     /// Anything with a `async def read(self, n: int) -> str` method.
     PyObject* reader;
 
@@ -208,70 +256,77 @@ typedef struct {
     // clang-format on
 } Parser;
 
-static PyObject* Parser_new(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
-    (void)args;
-    (void)kwargs;
-
-    Parser* self = (Parser*)(type->tp_alloc(type, 0));
-    if (self) {
-        self->reader = NULL;
-        self->current_read = NULL;
-        self->record_so_far = NULL;
-        self->field_so_far = NULL;
-        self->field_so_far_capacity = 0;
-        self->field_so_far_len = 0;
-        self->dialect = (Dialect){0};
-        self->line_num = 0;
-        self->buffer_len = 0;
-        self->buffer_idx = 0;
-        self->state = (unsigned char)STATE_START_RECORD;
-        self->field_was_numeric = false;
-        self->last_char_was_cr = false;
-        self->eof = false;
-    }
-    return (PyObject*)self;
-}
-
 static void Parser_dealloc(Parser* self) {
-    if (self->reader) Py_DECREF(self->reader);
-    if (self->current_read) Py_DECREF(self->current_read);
-    if (self->record_so_far) Py_DECREF(self->record_so_far);
-    if (self->field_so_far) PyMem_Free(self->field_so_far);
-    Py_TYPE(self)->tp_free((PyObject*)self);
+    PyTypeObject* tp = Py_TYPE(self);
+    PyObject_GC_UnTrack(self);
+    tp->tp_clear((PyObject*)self);
+    if (self->field_so_far) {
+        PyMem_Free(self->field_so_far);
+        self->field_so_far = NULL;
+    }
+    PyObject_GC_Del(self);
+    Py_DECREF(tp);
 }
 
-static int Parser_init(Parser* self, PyObject* args, PyObject* kwargs) {
+static int Parser_traverse(Parser* self, visitproc visit, void* arg) {
+    Py_VISIT(self->module);
+    Py_VISIT(self->reader);
+    Py_VISIT(self->current_read);
+    Py_VISIT(self->record_so_far);
+#if PY_VERSION_HEX >= 0x03090000
+    Py_VISIT(Py_TYPE(self));
+#endif
+    return 0;
+}
+
+static int Parser_clear(Parser* self) {
+    Py_CLEAR(self->module);
+    Py_CLEAR(self->reader);
+    Py_CLEAR(self->current_read);
+    Py_CLEAR(self->record_so_far);
+    return 0;
+}
+
+static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) {
+    ModuleState* state = module_get_state(module);
+
+    Parser* self = PyObject_GC_New(Parser, state->parser_type);
+    if (!self) return NULL;
+
     PyObject* reader;
     PyObject* dialect;
-
     static char* kw_list[] = {"reader", "dialect", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kw_list, &reader, &dialect)) {
-        return -1;
+        Py_DECREF(self);
+        return NULL;
     }
 
     if (!Dialect_init(&self->dialect, dialect)) {
-        return -1;
+        Py_DECREF(self);
+        return NULL;
     }
+
+    Py_INCREF(module);
+    self->module = module;
 
     Py_INCREF(reader);
     self->reader = reader;
 
-    // ensure other fields weren't touched since allocation
-    assert(self->current_read == NULL);
-    assert(self->buffer == NULL);
-    assert(self->record_so_far == NULL);
-    assert(self->field_so_far == NULL);
-    assert(self->field_so_far_capacity == 0);
-    assert(self->field_so_far_len == 0);
-    assert(self->line_num == 0);
-    assert(self->buffer_len == 0);
-    assert(self->buffer_idx == 0);
-    assert(self->state == STATE_START_RECORD);
-    assert(self->field_was_numeric == false);
-    assert(self->last_char_was_cr == false);
-    assert(self->eof == false);
+    self->current_read = NULL;
+    self->record_so_far = NULL;
+    self->field_so_far = NULL;
+    self->field_so_far_capacity = 0;
+    self->field_so_far_len = 0;
+    self->line_num = 0;
+    self->buffer_len = 0;
+    self->buffer_idx = 0;
+    self->state = STATE_START_RECORD;
+    self->field_was_numeric = false;
+    self->last_char_was_cr = false;
+    self->eof = false;
 
-    return 0;
+    PyObject_GC_Track(self);
+    return (PyObject*)self;
 }
 
 static int Parser_add_char(Parser* self, Py_UCS4 c) {
@@ -545,29 +600,19 @@ static int Parser_initiate_read(Parser* self) {
     int result = 1;
 
     name = PyUnicode_FromStringAndSize("read", 4);
-    if (!name) {
-        result = 0;
-        goto ret;
-    }
+    if (!name) FINISH_WITH(0);
 
     len = PyLong_FromLong(PARSER_BUFFER_CAPACITY);
-    if (!len) {
-        result = 0;
-        goto ret;
-    }
+    if (!len) FINISH_WITH(0);
 
     read_coro = PyObject_CallMethodOneArg(self->reader, name, len);
-    if (!read_coro) {
-        result = 0;
-        goto ret;
-    }
+    if (!read_coro) FINISH_WITH(0);
 
     PyAsyncMethods* coro_async_methods = Py_TYPE(read_coro)->tp_as_async;
     if (!coro_async_methods || !coro_async_methods->am_await) {
         PyErr_Format(PyExc_TypeError, "reader.read returned %R, which is not awaitable",
                      read_coro);
-        result = 0;
-        goto ret;
+        FINISH_WITH(0);
     }
 
     self->current_read = coro_async_methods->am_await(read_coro);
@@ -643,31 +688,25 @@ static int Parser_copy_to_buffer(Parser* self, PyObject* unicode) {
 
     if (!PyUnicode_Check(unicode)) {
         PyErr_Format(PyExc_TypeError, "reader.read() returned %R, expected str", Py_TYPE(unicode));
-        result = 0;
-        goto ret;
+        FINISH_WITH(0);
     }
 
     Py_ssize_t len = PyUnicode_GetLength(unicode);
     if (len < 0) {
-        result = 0;
-        goto ret;
+        FINISH_WITH(0);
     } else if (len == 0) {
         self->buffer_len = 0;
         self->buffer_idx = 0;
         self->eof = true;
     } else if (len <= PARSER_BUFFER_CAPACITY) {
-        if (!PyUnicode_AsUCS4(unicode, self->buffer, PARSER_BUFFER_CAPACITY, false)) {
-            result = 0;
-            goto ret;
-        }
+        if (!PyUnicode_AsUCS4(unicode, self->buffer, PARSER_BUFFER_CAPACITY, false)) FINISH_WITH(0);
         self->buffer_len = (unsigned short)len;
         self->buffer_idx = 0;
     } else {
         PyErr_Format(PyExc_ValueError,
                      "reader has read %zi bytes, which is more than the requested %i bytes", len,
                      PARSER_BUFFER_CAPACITY);
-        result = 0;
-        goto ret;
+        FINISH_WITH(0);
     }
 
 ret:
@@ -716,56 +755,101 @@ static PyObject* Parser_next(Parser* self) {
     return NULL;
 }
 
+static PyMethodDef ParserMethods[] = {{NULL, NULL}};
+
 static PyMemberDef ParserMembers[] = {
     {"line_num", T_UINT, offsetof(Parser, line_num), 0,
      "Line number of the recently-returned row"},
     {NULL},
 };
 
-static PyAsyncMethods ParserAsyncMethods = {
-    .am_aiter = Py_NewRef,  // Return "self" unchanged
-    .am_anext = Py_NewRef,  // Return "self" unchanged
-    .am_await = Py_NewRef,  // Return "self" unchanged
+static PyType_Slot ParserSlots[] = {
+    {Py_tp_doc, "Asynchronous Iterator of CSV records from a reader"},
+    {Py_tp_traverse, Parser_traverse},
+    {Py_tp_clear, Parser_clear},
+    {Py_tp_dealloc, Parser_dealloc},
+    {Py_tp_members, ParserMembers},
+    {Py_tp_methods, ParserMethods},
+    {Py_am_await, Py_NewRef},  // Return "self" unchanged
+    {Py_am_aiter, Py_NewRef},  // Return "self" unchanged
+    {Py_am_anext, Py_NewRef},  // Return "self" unchanged
+    {Py_tp_iter, Py_NewRef},   // Return "self" unchanged
+    {Py_tp_iternext, Parser_next},
+    {0, NULL},
 };
 
-static PyTypeObject ParserType = {
-    // clang-format off
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "_parser.Parser",
-    .tp_doc = PyDoc_STR("Asynchronous Iterator of CSV records from a reader"),
-    .tp_basicsize = sizeof(Parser),
-    .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_members = ParserMembers,
-    .tp_new = Parser_new,
-    .tp_init = (initproc)Parser_init,
-    .tp_dealloc = (destructor)Parser_dealloc,
-    .tp_as_async = &ParserAsyncMethods,
-    .tp_iter = Py_NewRef,  // Return "self" unchanged
-    .tp_iternext = (iternextfunc)Parser_next,
-    // clang-format on
+static PyType_Spec ParserSpec = {
+    .name = "_parser.ParserO",
+    .basicsize = sizeof(Parser),
+    .itemsize = 0,
+    .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
+              Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_DISALLOW_INSTANTIATION),
+    .slots = ParserSlots,
 };
 
-static PyModuleDef ParserModule = {
-    PyModuleDef_HEAD_INIT,
-    .m_name = "_parser",
-    .m_doc = "_parser implements asynchronous CSV record parsing",
-    .m_size = -1,
-};
+static int module_exec(PyObject* module) {
+    int result = 0;
+    PyObject* csv_module = NULL;
+    PyObject* io_module = NULL;
+    PyObject* io_default_buffer_size_obj = NULL;
 
-PyMODINIT_FUNC PyInit__parser(void) {
-    PyObject* m;
-    if (PyType_Ready(&ParserType) < 0) return NULL;
+    ModuleState* state = module_get_state(module);
 
-    m = PyModule_Create(&ParserModule);
-    if (m == NULL) return NULL;
+    csv_module = PyImport_ImportModule("csv");
+    if (!csv_module) FINISH_WITH(-1);
 
-    Py_INCREF(&ParserType);
-    if (PyModule_AddObject(m, "Parser", (PyObject*)&ParserType) < 0) {
-        Py_DECREF(&ParserType);
-        Py_DECREF(m);
-        return NULL;
+    state->csv_error = PyObject_GetAttrString(csv_module, "Error");
+    if (!state->csv_error) FINISH_WITH(-1);
+
+    state->csv_field_size_limit = PyObject_GetAttrString(csv_module, "field_size_limit");
+    if (!state->csv_field_size_limit) FINISH_WITH(-1);
+
+    io_module = PyImport_ImportModule("io");
+    if (!io_module) FINISH_WITH(-1);
+
+    io_default_buffer_size_obj = PyObject_GetAttrString(io_module, "DEFAULT_BUFFER_SIZE");
+    if (!io_default_buffer_size_obj) FINISH_WITH(-1);
+
+    state->io_default_buffer_size = PyLong_AsLong(io_default_buffer_size_obj);
+    if (PyErr_Occurred()) FINISH_WITH(-1);
+    if (state->io_default_buffer_size <= 0) {
+        PyErr_Format(PyExc_ValueError, "io.DEFAULT_BUFFER_SIZE is %ld, expected a positive integer", state->io_default_buffer_size);
+        FINISH_WITH(-1);
     }
 
-    return m;
+    state->parser_type = (PyTypeObject*)PyType_FromSpec(&ParserSpec);
+    if (!state->parser_type) FINISH_WITH(-1);
+
+ret:
+    Py_XDECREF(csv_module);
+    Py_XDECREF(io_module);
+    Py_XDECREF(io_default_buffer_size_obj);
+    return result;
 }
+
+static PyMethodDef ModuleMethods[] = {
+    { "Parser", _PyCFunction_CAST(Parser_new), METH_VARARGS | METH_KEYWORDS, "Creates a new Parser instance" },
+    { NULL, NULL },
+};
+
+static PyModuleDef_Slot ModuleSlots[] = {
+    {Py_mod_exec, module_exec},
+#if PY_VERSION_HEX >= 0x030C0000
+    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
+#endif
+    {0, NULL},
+};
+
+static PyModuleDef Module = {
+    .m_base = PyModuleDef_HEAD_INIT,
+    .m_name = "_parser",
+    .m_doc = "_parser implements asynchronous CSV record parsing",
+    .m_size = sizeof(ModuleState),
+    .m_slots = ModuleSlots,
+    .m_methods = ModuleMethods,
+    .m_traverse = module_traverse,
+    .m_clear = module_clear,
+    .m_free = module_free,
+};
+
+PyMODINIT_FUNC PyInit__parser(void) { return PyModuleDef_Init(&Module); }
