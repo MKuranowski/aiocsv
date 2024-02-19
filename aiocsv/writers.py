@@ -39,12 +39,14 @@ class AsyncWriter:
         await self._rewrite_buffer()
 
     async def writerows(self, rows: Iterable[Iterable[Any]]) -> None:
-        """Writes multiple rows to the specified file.
+        """Writes multiple rows to the specified file."""
+        for row in rows:
+            # Pass row to underlying csv.writer instance
+            self._csv_writer.writerow(row)
 
-        All rows are temporarly stored in RAM before actually being written to the file,
-        so don't provide a generator of loads of rows."""
-        # Pass row to underlying csv.writer instance
-        self._csv_writer.writerows(rows)
+            # Flush occasionally io prevent buffering too much data
+            if self._buffer.tell() >= io.DEFAULT_BUFFER_SIZE:
+                await self._rewrite_buffer()
 
         # Write to actual file
         await self._rewrite_buffer()
@@ -86,9 +88,14 @@ class AsyncDictWriter:
         await self._rewrite_buffer()
 
     async def writerows(self, rows: Iterable[Mapping[str, Any]]) -> None:
-        """Writes multiple rows to the specified file.
+        """Writes multiple rows to the specified file."""
+        for row in rows:
+            # Pass row to underlying csv.writer instance
+            self._csv_writer.writerow(row)
 
-        All rows are temporarly stored in RAM before actually being written to the file,
-        so don't provide a generator of loads of rows."""
-        self._csv_writer.writerows(rows)
+            # Flush occasionally io prevent buffering too much data
+            if self._buffer.tell() >= io.DEFAULT_BUFFER_SIZE:
+                await self._rewrite_buffer()
+
+        # Write to actual file
         await self._rewrite_buffer()

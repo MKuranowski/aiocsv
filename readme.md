@@ -155,14 +155,10 @@ In this object "row" is a sequence of values.
 Additional keyword arguments are passed to the underlying csv.writer instance.
 
 *Methods*:
-- `async writerow(self, row: Iterable[Any]) -> None`
+- `async writerow(self, row: Iterable[Any]) -> None`:
     Writes one row to the specified file.
-
-- `async writerows(self, rows: Iterable[Iterable[Any]]) -> None`
+- `async writerows(self, rows: Iterable[Iterable[Any]]) -> None`:
     Writes multiple rows to the specified file.
-
-    All rows are temporarily stored in RAM before actually being written to the file,
-    so don't provide a generator of loads of rows.
 
 *Readonly properties*:
 - `dialect`: Link to underlying's csv.reader's `dialect` attribute
@@ -177,17 +173,11 @@ In this object "row" is a mapping from fieldnames to values.
 Additional keyword arguments are passed to the underlying csv.DictWriter instance.
 
 *Methods*:
-- `async writeheader(self) -> None`
-    Writes header row to the specified file.
-
-- `async writerow(self, row: Mapping[str, Any]) -> None`
+- `async writeheader(self) -> None`: Writes header row to the specified file.
+- `async writerow(self, row: Mapping[str, Any]) -> None`:
     Writes one row to the specified file.
-
-- `async writerows(self, rows: Iterable[Mapping[str, Any]]) -> None`
+- `async writerows(self, rows: Iterable[Mapping[str, Any]]) -> None`:
     Writes multiple rows to the specified file.
-
-    All rows are temporarily stored in RAM before actually being written to the file,
-    so don't provide a generator of loads of rows.
 
 *Readonly properties*:
 - `dialect`: Link to underlying's csv.reader's `dialect` attribute
