@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Type, List
+from typing import AsyncIterator, Callable, List, Type
 import pytest
 import csv
 import io
@@ -15,13 +15,12 @@ else:
 
 
 class Parser(Protocol):
-    line_num: int
-
-    def __init__(self, __r: WithAsyncRead, __d: DialectLike) -> None: ...
     def __aiter__(self) -> AsyncIterator[List[str]]: ...
+    @property
+    def line_num(self) -> int: ...
 
 
-PARSERS: List[Type[Parser]] = [PyParser, CParser]
+PARSERS: List[Callable[[WithAsyncRead, DialectLike], Parser]] = [PyParser, CParser]
 PARSER_NAMES: List[str] = ["pure_python_parser", "c_parser"]
 
 

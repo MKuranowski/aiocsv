@@ -755,6 +755,12 @@ static PyObject* Parser_next(Parser* self) {
     return NULL;
 }
 
+// TODO: Once support 3.8 is dropped, the "Parser" function can be replaced by
+//       normal .tp_new and .tp_init members on the "_Parser" type.
+//       Starting with 3.9 it's possible to access modules state from the _Parser type
+//       with PyType_GetModuleState, but on 3.8 the module needs to be passed around directly
+//       from the fake constructor-function.
+
 static PyMethodDef ParserMethods[] = {{NULL, NULL}};
 
 static PyMemberDef ParserMembers[] = {
@@ -779,7 +785,7 @@ static PyType_Slot ParserSlots[] = {
 };
 
 static PyType_Spec ParserSpec = {
-    .name = "_parser.ParserO",
+    .name = "_parser._Parser",
     .basicsize = sizeof(Parser),
     .itemsize = 0,
     .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |

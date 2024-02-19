@@ -2,8 +2,11 @@ from typing import AsyncIterator, List
 
 from .protocols import WithAsyncRead, DialectLike
 
+class _Parser:
+    """Return type of the "Parser" function, not accessible from Python."""
 
-class Parser(AsyncIterator[List[str]]):
-    line_num: int
+    def __aiter__(self) -> AsyncIterator[List[str]]: ...
+    @property
+    def line_num(self) -> int: ...
 
-    def __init__(self, __reader: WithAsyncRead, __dialect: DialectLike) -> None: ...
+def Parser(reader: WithAsyncRead, dialect: DialectLike) -> _Parser: ...
