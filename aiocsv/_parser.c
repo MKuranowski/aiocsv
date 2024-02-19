@@ -13,6 +13,15 @@
         goto ret;               \
     } while (0)
 
+#if PY_VERSION_HEX < 0x030A0000
+
+static inline PyObject* Py_NewRef(PyObject* o) {
+    Py_INCREF(o);
+    return o;
+}
+
+#endif
+
 typedef struct {
     /// csv.Error exception class
     PyObject* csv_error;
@@ -310,11 +319,8 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
         return NULL;
     }
 
-    Py_INCREF(module);
-    self->module = module;
-
-    Py_INCREF(reader);
-    self->reader = reader;
+    self->module = Py_NewRef(module);
+    self->reader = Py_NewRef(reader);
 
     PyObject* field_size_limit_obj =
         PyObject_CallObject(module_get_state(module)->csv_field_size_limit, NULL);
