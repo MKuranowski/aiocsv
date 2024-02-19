@@ -1,12 +1,15 @@
 # aiocsv
 
-Asynchronous CSV reading and writing.  
+Asynchronous CSV reading and writing.
 
 
 ## Installation
 
-Python 3.6+ is required.  
-`pip3 install aiocsv`
+`pip install aiocsv`. Python 3.8+ is required.
+
+This module contains an extension written in C. Pre-build binaries
+may not be available for your configuration. You might need a C compiler
+and Python headers to install aiocsv.
 
 
 ## Usage
@@ -18,8 +21,8 @@ AsyncWriter & AsyncDictWriter accept any object that has a `write(b: str)` corou
 
 Reading is implemented using a custom CSV parser, which should behave exactly like the CPython parser.
 
-Writing is implemented using the synchronous csv.writer and csv.DictWriter objects - 
-the serializers write data to a StringIO, and that buffer is then rewritten to the underlaying
+Writing is implemented using the synchronous csv.writer and csv.DictWriter objects -
+the serializers write data to a StringIO, and that buffer is then rewritten to the underlying
 asynchronous file.
 
 
@@ -66,6 +69,14 @@ async def main():
 asyncio.run(main())
 ```
 
+## Differences with `csv`
+
+`aiocsv` strives to be a drop-in replacement for Python's builtin [csv module](https://docs.python.org/3/library/csv.html). There are 2 notable differences:
+
+- Readers accept objects with async `read` methods, instead of an AsyncIterable over lines
+    from a file.
+- `AsyncDictReader.fieldnames` can be `None` - use `await AsyncDictReader.get_fieldnames()` instead.
+
 
 ## Reference
 
@@ -73,7 +84,7 @@ asyncio.run(main())
 ### aiocsv.AsyncReader
 `AsyncReader(asyncfile: aiocsv.protocols.WithAsyncRead, **csvreaderparams)`
 
-An object that iterates over lines in given asynchronous file.  
+An object that iterates over lines in given asynchronous file.
 Additional keyword arguments are understood as dialect parameters.
 
 Iterating over this object returns parsed CSV rows (`List[str]`).
@@ -91,36 +102,44 @@ Iterating over this object returns parsed CSV rows (`List[str]`).
 
 ### aiocsv.AsyncDictReader
 ```
-AsyncDictReader(asyncfile: aiocsv.protocols.WithAsyncRead,
-                fieldnames: Optional[Sequence[str]] = None, restkey: Optional[str] = None, restval: Optional[str] = None, **csvreaderparams)
+AsyncDictReader(
+    asyncfile: aiocsv.protocols.WithAsyncRead,
+    fieldnames: Optional[Sequence[str]] = None,
+    restkey: Optional[str] = None,
+    restval: Optional[str] = None,
+    **csvreaderparams,
+)
 ```
 
-An object that iterates over lines in given asynchronous file.  
-All arguments work exactly the same like in csv.DictReader.
+An object that iterates over lines in given asynchronous file.
+All arguments work exactly the same was as in csv.DictReader.
 
 Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
 
 *Methods*:
 - `__aiter__(self) -> self`
 - `async __anext__(self) -> Dict[str, str]`
+- `async get_fieldnames(self) -> List[str]`
+
 
 *Properties*:
 - `fieldnames`: field names used when converting rows to dictionaries  
-    **⚠️** Unlike csv.DictReader, if not provided in the constructor, at least one row has to be retrieved before getting the fieldnames.
+    **⚠️** Unlike csv.DictReader, this property can't read the fieldnames if they are missing -
+    it's not possible to `await` on the header row in a property getter.
+    **Use `await reader.get_fieldnames()`**.
     ```py
     reader = csv.DictReader(some_file)
     reader.fieldnames  # ["cells", "from", "the", "header"]
 
     areader = aiofiles.AsyncDictReader(same_file_but_async)
     areader.fieldnames   # ⚠️ None
-    await areader.__anext__()
-    areader.fieldnames  # ["cells", "from", "the", "header"]
+    await areader.get_fieldnames()  # ["cells", "from", "the", "header"]
     ```
 - `restkey`: If a row has more cells then the header, all remaining cells are stored under
   this key in the returned dictionary. Defaults to `None`.
 - `restval`: If a row has less cells then the header, then missing keys will use this
   value. Defaults to `None`.
-- `reader`: Underlaying `aiofiles.AsyncReader` instance
+- `reader`: Underlying `aiofiles.AsyncReader` instance
 
 *Read-only properties*:
 - `dialect`: Link to `self.reader.dialect` - the current csv.Dialect
@@ -130,19 +149,19 @@ Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
 ### aiocsv.AsyncWriter
 `AsyncWriter(asyncfile: aiocsv.protocols.WithAsyncWrite, **csvwriterparams)`
 
-An object that writes csv rows to the given asynchronous file.  
+An object that writes csv rows to the given asynchronous file.
 In this object "row" is a sequence of values.
 
 Additional keyword arguments are passed to the underlying csv.writer instance.
 
 *Methods*:
-- `async writerow(self, row: Iterable[Any]) -> None`  
+- `async writerow(self, row: Iterable[Any]) -> None`
     Writes one row to the specified file.
 
-- `async writerows(self, rows: Iterable[Iterable[Any]]) -> None`  
+- `async writerows(self, rows: Iterable[Iterable[Any]]) -> None`
     Writes multiple rows to the specified file.
-    
-    All rows are temporarly stored in RAM before actually being written to the file,  
+
+    All rows are temporarily stored in RAM before actually being written to the file,
     so don't provide a generator of loads of rows.
 
 *Readonly properties*:
@@ -152,22 +171,22 @@ Additional keyword arguments are passed to the underlying csv.writer instance.
 ### aiocsv.AsyncDictWriter
 `AsyncDictWriter(asyncfile: aiocsv.protocols.WithAsyncWrite, fieldnames: Sequence[str], **csvdictwriterparams)`
 
-An object that writes csv rows to the given asynchronous file.  
+An object that writes csv rows to the given asynchronous file.
 In this object "row" is a mapping from fieldnames to values.
 
 Additional keyword arguments are passed to the underlying csv.DictWriter instance.
 
 *Methods*:
-- `async writeheader(self) -> None`  
+- `async writeheader(self) -> None`
     Writes header row to the specified file.
 
-- `async writerow(self, row: Mapping[str, Any]) -> None`  
+- `async writerow(self, row: Mapping[str, Any]) -> None`
     Writes one row to the specified file.
 
-- `async writerows(self, rows: Iterable[Mapping[str, Any]]) -> None`  
+- `async writerows(self, rows: Iterable[Mapping[str, Any]]) -> None`
     Writes multiple rows to the specified file.
-    
-    All rows are temporarly stored in RAM before actually being written to the file,
+
+    All rows are temporarily stored in RAM before actually being written to the file,
     so don't provide a generator of loads of rows.
 
 *Readonly properties*:
