@@ -13,6 +13,14 @@
         goto ret;               \
     } while (0)
 
+#if PY_VERSION_HEX < 0x03090000
+
+static inline PyObject* PyObject_CallMethodOneArg(PyObject* self, PyObject* name, PyObject* arg) {
+    return PyObject_CallMethodObjArgs(self, name, arg, NULL);
+}
+
+#endif
+
 #if PY_VERSION_HEX < 0x030A0000
 
 static inline PyObject* Py_NewRef(PyObject* o) {
