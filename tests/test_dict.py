@@ -27,6 +27,14 @@ async def test_dict_read():
 
 
 @pytest.mark.asyncio
+async def test_dict_read_line_nums():
+    async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
+        r = AsyncDictReader(afp, **PARAMS)
+        read_rows = [(row, r.line_num) async for row in r]
+        assert read_rows == [(row, i) for i, row in enumerate(VALUES, start=2)]
+
+
+@pytest.mark.asyncio
 async def test_dict_write():
     # Create a TempFile to direct writer to
     with NamedTemporaryFile(mode="w+", suffix=".csv", delete=False) as tf:
