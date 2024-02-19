@@ -23,6 +23,9 @@ static inline PyObject* PyObject_CallMethodOneArg(PyObject* self, PyObject* name
 
 #if PY_VERSION_HEX < 0x030A0000
 
+#define Py_TPFLAGS_IMMUTABLETYPE 0
+#define Py_TPFLAGS_DISALLOW_INSTANTIATION 0
+
 static inline PyObject* Py_NewRef(PyObject* o) {
     Py_INCREF(o);
     return o;
