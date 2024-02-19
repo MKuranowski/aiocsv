@@ -1,5 +1,5 @@
 from enum import IntEnum, auto
-from typing import Any, Awaitable, Generator, List, Optional, Self, Sequence
+from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence
 import csv
 
 from .protocols import DialectLike, WithAsyncRead
@@ -47,7 +47,7 @@ class Parser:
 
     # AsyncIterator[List[str]] interface
 
-    def __aiter__(self) -> Self:
+    def __aiter__(self) -> AsyncIterator[List[str]]:
         return self
 
     def __anext__(self) -> Awaitable[List[str]]:
@@ -60,8 +60,8 @@ class Parser:
 
     # Generator[Any, None, List[str]] interface
 
-    def __iter__(self) -> Self:
-        return self
+    def __iter__(self) -> Generator[Any, None, List[str]]:
+        return self  # type: ignore
 
     def __next__(self) -> Any:
         # Loop until a record has been successfully parsed or EOF has been hit
