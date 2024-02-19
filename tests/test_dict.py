@@ -35,6 +35,16 @@ async def test_dict_read_line_nums():
 
 
 @pytest.mark.asyncio
+async def test_dict_read_get_fieldnames():
+    async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
+        reader = AsyncDictReader(afp, **PARAMS)
+
+        assert reader.fieldnames is None
+        assert await reader.get_fieldnames() == ["City", "Stations", "System Length"]
+        assert reader.fieldnames == ["City", "Stations", "System Length"]
+
+
+@pytest.mark.asyncio
 async def test_dict_write():
     # Create a TempFile to direct writer to
     with NamedTemporaryFile(mode="w+", suffix=".csv", delete=False) as tf:

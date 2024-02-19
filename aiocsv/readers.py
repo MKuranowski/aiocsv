@@ -60,6 +60,20 @@ class AsyncDictReader:
     def line_num(self) -> int:
         return self.reader.line_num
 
+    async def get_fieldnames(self) -> List[str]:
+        """Gets the fieldnames of the CSV file being read.
+
+        This function forces a read of the fieldnames if they
+        are not yet available and should be preferred over directly
+        accessing the fieldnames property.
+        """
+        if self.fieldnames is None:
+            try:
+                self.fieldnames = await self.reader.__anext__()
+            except StopAsyncIteration:
+                self.fieldnames = []
+        return self.fieldnames
+
     def __aiter__(self):
         return self
 
