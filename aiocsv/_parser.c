@@ -878,7 +878,7 @@ ret:
 }
 
 static PyMethodDef ModuleMethods[] = {
-    {"Parser", _PyCFunction_CAST(Parser_new), METH_VARARGS | METH_KEYWORDS,
+    {"Parser", (PyCFunction)Parser_new, METH_VARARGS | METH_KEYWORDS,
      "Creates a new Parser instance"},
     {NULL, NULL},
 };
