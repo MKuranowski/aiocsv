@@ -148,10 +148,10 @@ async def test_parsing_strict_quoting(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), strict=True)
 
-    with pytest.raises(csv.Error):
+    with pytest.raises(csv.Error, match="',' expected after '\"'"):
         list(csv_parser)
 
-    with pytest.raises(csv.Error):
+    with pytest.raises(csv.Error, match="',' expected after '\"'"):
         [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
 
 

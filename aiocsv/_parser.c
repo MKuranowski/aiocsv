@@ -120,9 +120,10 @@ typedef struct {
     Py_UCS4 delimiter;
     Py_UCS4 quotechar;
     Py_UCS4 escapechar;
+    unsigned char quoting;
     bool doublequote;
     bool skipinitialspace;
-    unsigned char quoting;
+    bool strict;
 } Dialect;
 
 #define dialect_init_char(d, o, attr_name)                                                  \
@@ -185,10 +186,10 @@ int Dialect_init(Dialect* d, PyObject* o) {
     dialect_init_char(d, o, delimiter);
     dialect_init_optional_char(d, o, quotechar);
     dialect_init_optional_char(d, o, escapechar);
+    dialect_init_quoting(d, o);
     dialect_init_bool(d, o, doublequote);
     dialect_init_bool(d, o, skipinitialspace);
-    dialect_init_quoting(d, o);
-    // dialect_init_bool(d, o, strict);
+    dialect_init_bool(d, o, strict);
     return 1;
 }
 
@@ -448,11 +449,15 @@ static Decision Parser_process_char_in_quote_in_quoted(Parser* self, Py_UCS4 c) 
         if (!Parser_save_field(self)) return DECISION_ERROR;
         self->state = STATE_START_RECORD;
         return DECISION_DONE;
-    } else {
-        // TODO: Raise an error if dialect.strict
+    } else if (!self->dialect.strict) {
         if (!Parser_add_char(self, c)) return DECISION_ERROR;
         self->state = STATE_IN_FIELD;
         return DECISION_CONTINUE;
+    } else {
+        PyObject* csv_error = module_get_state(self->module)->csv_error;
+        PyErr_Format(csv_error, "'%c' expected after '%c'", self->dialect.delimiter,
+                     self->dialect.quotechar);
+        return DECISION_ERROR;
     }
 }
 
@@ -699,7 +704,8 @@ static int Parser_copy_to_buffer(Parser* self, PyObject* unicode) {
         self->buffer_idx = 0;
         self->eof = true;
     } else if (len <= PARSER_BUFFER_CAPACITY) {
-        if (!PyUnicode_AsUCS4(unicode, self->buffer, PARSER_BUFFER_CAPACITY, false)) FINISH_WITH(0);
+        if (!PyUnicode_AsUCS4(unicode, self->buffer, PARSER_BUFFER_CAPACITY, false))
+            FINISH_WITH(0);
         self->buffer_len = (unsigned short)len;
         self->buffer_idx = 0;
     } else {
@@ -788,8 +794,8 @@ static PyType_Spec ParserSpec = {
     .name = "_parser._Parser",
     .basicsize = sizeof(Parser),
     .itemsize = 0,
-    .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
-              Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_DISALLOW_INSTANTIATION),
+    .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_IMMUTABLETYPE |
+              Py_TPFLAGS_DISALLOW_INSTANTIATION),
     .slots = ParserSlots,
 };
 
@@ -819,7 +825,9 @@ static int module_exec(PyObject* module) {
     state->io_default_buffer_size = PyLong_AsLong(io_default_buffer_size_obj);
     if (PyErr_Occurred()) FINISH_WITH(-1);
     if (state->io_default_buffer_size <= 0) {
-        PyErr_Format(PyExc_ValueError, "io.DEFAULT_BUFFER_SIZE is %ld, expected a positive integer", state->io_default_buffer_size);
+        PyErr_Format(PyExc_ValueError,
+                     "io.DEFAULT_BUFFER_SIZE is %ld, expected a positive integer",
+                     state->io_default_buffer_size);
         FINISH_WITH(-1);
     }
 
@@ -834,8 +842,9 @@ ret:
 }
 
 static PyMethodDef ModuleMethods[] = {
-    { "Parser", _PyCFunction_CAST(Parser_new), METH_VARARGS | METH_KEYWORDS, "Creates a new Parser instance" },
-    { NULL, NULL },
+    {"Parser", _PyCFunction_CAST(Parser_new), METH_VARARGS | METH_KEYWORDS,
+     "Creates a new Parser instance"},
+    {NULL, NULL},
 };
 
 static PyModuleDef_Slot ModuleSlots[] = {
