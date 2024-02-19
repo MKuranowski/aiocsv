@@ -1,5 +1,5 @@
 from enum import IntEnum, auto
-from typing import Any, Awaitable, Generator, Self, Sequence
+from typing import Any, Awaitable, Generator, List, Optional, Self, Sequence
 import csv
 
 from .protocols import DialectLike, WithAsyncRead
@@ -33,39 +33,39 @@ class Parser:
         self.dialect = dialect
         self.reader = reader
 
-        self.current_read: Generator[Any, None, str] | None = None
+        self.current_read: Optional[Generator[Any, None, str]] = None
         self.buffer: str = ""
         self.eof: bool = False
         self.line_num: int = 0
 
         self.state = ParserState.START_RECORD
-        self.record_so_far: list[str] = []
-        self.field_so_far: list[str] = []
+        self.record_so_far: List[str] = []
+        self.field_so_far: List[str] = []
         self.field_limit: int = csv.field_size_limit()
         self.field_was_numeric: bool = False
         self.last_char_was_cr: bool = False
 
-    # AsyncIterator[list[str]] interface
+    # AsyncIterator[List[str]] interface
 
     def __aiter__(self) -> Self:
         return self
 
-    def __anext__(self) -> Awaitable[list[str]]:
+    def __anext__(self) -> Awaitable[List[str]]:
         return self
 
-    # Awaitable[list[str]] interface
+    # Awaitable[List[str]] interface
 
-    def __await__(self) -> Generator[Any, None, list[str]]:
+    def __await__(self) -> Generator[Any, None, List[str]]:
         return self  # type: ignore
 
-    # Generator[Any, None, list[str]] interface
+    # Generator[Any, None, List[str]] interface
 
     def __iter__(self) -> Self:
         return self
 
     def __next__(self) -> Any:
         # Loop until a record has been successfully parsed or EOF has been hit
-        record: list[str] | None = None
+        record: Optional[List[str]] = None
         while record is None and (self.buffer or not self.eof):
             # No pending read and no data available - initiate one
             if not self.buffer and self.current_read is None:
@@ -93,7 +93,7 @@ class Parser:
 
     # Straightforward parser interface
 
-    def try_parse(self) -> list[str] | None:
+    def try_parse(self) -> Optional[List[str]]:
         decision = Decision.CONTINUE
 
         while decision is Decision.CONTINUE and self.buffer:
@@ -256,7 +256,7 @@ class Parser:
         if self.state not in (ParserState.START_RECORD, ParserState.EAT_NEWLINE):
             self.save_field()
 
-    def extract_record(self) -> list[str]:
+    def extract_record(self) -> List[str]:
         r = self.record_so_far.copy()
         self.record_so_far.clear()
         return r
