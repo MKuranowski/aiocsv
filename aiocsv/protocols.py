@@ -1,10 +1,4 @@
-from typing import Any
-import sys
-
-if sys.version_info < (3, 8):
-    from typing_extensions import Protocol
-else:
-    from typing import Protocol
+from typing import Any, Optional, Protocol
 
 
 class WithAsyncWrite(Protocol):
@@ -17,8 +11,8 @@ class WithAsyncRead(Protocol):
 
 class DialectLike(Protocol):
     delimiter: str
-    quotechar: str | None
-    escapechar: str | None
+    quotechar: Optional[str]
+    escapechar: Optional[str]
     doublequote: bool
     skipinitialspace: bool
     quoting: int

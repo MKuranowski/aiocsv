@@ -1,17 +1,11 @@
-from typing import AsyncIterator, Callable, List, Type
+from typing import AsyncIterator, Callable, List, Protocol, Type
 import pytest
 import csv
 import io
-import sys
 
 from aiocsv.parser import Parser as PyParser
 from aiocsv._parser import Parser as CParser
 from aiocsv.protocols import WithAsyncRead, DialectLike
-
-if sys.version_info < (3, 8):
-    from typing_extensions import Protocol
-else:
-    from typing import Protocol
 
 
 class Parser(Protocol):
