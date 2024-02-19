@@ -247,3 +247,19 @@ async def test_parsing_line_num(parser: Type[Parser]):
 
     assert csv_result == expected_result
     assert custom_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_field_size_limit(parser: Type[Parser]):
+    csv.field_size_limit(64)
+
+    data = "a" * 65 + "\r\n"
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), strict=True)
+
+    with pytest.raises(csv.Error, match=r"field larger than field limit \(64\)"):
+        list(csv_parser)
+
+    with pytest.raises(csv.Error, match=r"field larger than field limit \(64\)"):
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]

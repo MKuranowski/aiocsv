@@ -41,6 +41,7 @@ class Parser:
         self.state = ParserState.START_RECORD
         self.record_so_far: list[str] = []
         self.field_so_far: list[str] = []
+        self.field_limit: int = csv.field_size_limit()
         self.field_was_numeric: bool = False
         self.last_char_was_cr: bool = False
 
@@ -231,7 +232,8 @@ class Parser:
         return Decision.DONE if c == "\n" else Decision.DONE_WITHOUT_CONSUMING
 
     def add_char(self, c: str) -> None:
-        # TODO: Check against field_limit
+        if len(self.field_so_far) == self.field_limit:
+            raise csv.Error(f"field larger than field limit ({self.field_limit})")
         self.field_so_far.append(c)
 
     def save_field(self) -> None:

@@ -232,6 +232,9 @@ typedef struct {
     /// C-friendly representation of the csv dialect.
     Dialect dialect;
 
+    /// Limit for the field size
+    long field_size_limit;
+
     /// Zero-based line number of the current position, which is equivalent to
     /// a one-based line number of the last-encountered line.
     unsigned int line_num;
@@ -313,6 +316,20 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
     Py_INCREF(reader);
     self->reader = reader;
 
+    PyObject* field_size_limit_obj =
+        PyObject_CallObject(module_get_state(module)->csv_field_size_limit, NULL);
+    if (!field_size_limit_obj) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    self->field_size_limit = PyLong_AsLong(field_size_limit_obj);
+    Py_DECREF(field_size_limit_obj);
+    if (PyErr_Occurred()) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     self->current_read = NULL;
     self->record_so_far = NULL;
     self->field_so_far = NULL;
@@ -331,9 +348,11 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
 }
 
 static int Parser_add_char(Parser* self, Py_UCS4 c) {
-    // TODO: Check against csv.field_size_limit
-
-    if (self->field_so_far_len >= self->field_so_far_capacity) {
+    if (self->field_so_far_len == self->field_size_limit) {
+        PyObject* err = module_get_state(self->module)->csv_error;
+        PyErr_Format(err, "field larger than field limit (%ld)", self->field_size_limit);
+        return 0;
+    } else if (self->field_so_far_len >= self->field_so_far_capacity) {
         Py_ssize_t new_capacity =
             self->field_so_far_capacity ? self->field_so_far_capacity * 2 : 4096;
         Py_UCS4* new_buffer = self->field_so_far;
