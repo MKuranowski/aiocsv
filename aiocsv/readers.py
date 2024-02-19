@@ -3,7 +3,11 @@ from warnings import warn
 from typing import Dict, List, Optional, Sequence
 from .protocols import WithAsyncRead
 
-from .parser import Parser
+try:
+    from ._parser import Parser
+except ImportError:
+    warn("using slow, pure-Python parser")
+    from .parser import Parser
 
 
 class AsyncReader:
