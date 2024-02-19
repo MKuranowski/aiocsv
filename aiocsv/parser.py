@@ -108,56 +108,55 @@ class Parser:
             return None
 
     def process_char(self, c: str) -> Decision:
-        match self.state:
-            case ParserState.START_RECORD:
-                return self.process_char_in_start_record(c)
-            case ParserState.START_FIELD:
-                return self.process_char_in_start_field(c)
-            case ParserState.ESCAPE:
-                return self.process_char_in_escape(c)
-            case ParserState.IN_FIELD:
-                return self.process_char_in_field(c)
-            case ParserState.IN_QUOTED_FIELD:
-                return self.process_char_in_quoted_field(c)
-            case ParserState.ESCAPE_IN_QUOTED:
-                return self.process_char_in_escape_in_quoted(c)
-            case ParserState.QUOTE_IN_QUOTED:
-                return self.process_char_in_quote_in_quoted(c)
-            case ParserState.EAT_NEWLINE:
-                return self.process_char_in_eat_newline(c)
+        if self.state == ParserState.START_RECORD:
+            return self.process_char_in_start_record(c)
+        elif self.state == ParserState.START_FIELD:
+            return self.process_char_in_start_field(c)
+        elif self.state == ParserState.ESCAPE:
+            return self.process_char_in_escape(c)
+        elif self.state == ParserState.IN_FIELD:
+            return self.process_char_in_field(c)
+        elif self.state == ParserState.IN_QUOTED_FIELD:
+            return self.process_char_in_quoted_field(c)
+        elif self.state == ParserState.ESCAPE_IN_QUOTED:
+            return self.process_char_in_escape_in_quoted(c)
+        elif self.state == ParserState.QUOTE_IN_QUOTED:
+            return self.process_char_in_quote_in_quoted(c)
+        elif self.state == ParserState.EAT_NEWLINE:
+            return self.process_char_in_eat_newline(c)
+        else:
+            raise RuntimeError(f"unhandled parser state: {self.state}")
 
     def process_char_in_start_record(self, c: str) -> Decision:
-        match c:
-            case "\r":
-                self.state = ParserState.EAT_NEWLINE
-                return Decision.CONTINUE
-            case "\n":
-                self.state = ParserState.START_RECORD
-                return Decision.DONE
-            case _:
-                return self.process_char_in_start_field(c)
+        if c == "\r":
+            self.state = ParserState.EAT_NEWLINE
+            return Decision.CONTINUE
+        elif c == "\n":
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        else:
+            return self.process_char_in_start_field(c)
 
     def process_char_in_start_field(self, c: str) -> Decision:
-        match c:
-            case "\r":
-                self.save_field()
-                self.state = ParserState.EAT_NEWLINE
-            case "\n":
-                self.save_field()
-                self.state = ParserState.START_RECORD
-                return Decision.DONE
-            case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
-                self.state = ParserState.IN_QUOTED_FIELD
-            case self.dialect.escapechar:
-                self.state = ParserState.ESCAPE
-            # XXX: skipinitialspace handling is done in save_field()
-            case self.dialect.delimiter:
-                self.save_field()
-                self.state = ParserState.START_FIELD
-            case _:
-                self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
-                self.add_char(c)
-                self.state = ParserState.IN_FIELD
+        if c == "\r":
+            self.save_field()
+            self.state = ParserState.EAT_NEWLINE
+        elif c == "\n":
+            self.save_field()
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        elif c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            self.state = ParserState.IN_QUOTED_FIELD
+        elif c == self.dialect.escapechar:
+            self.state = ParserState.ESCAPE
+        # XXX: skipinitialspace handling is done in save_field()
+        elif c == self.dialect.delimiter:
+            self.save_field()
+            self.state = ParserState.START_FIELD
+        else:
+            self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
+            self.add_char(c)
+            self.state = ParserState.IN_FIELD
         return Decision.CONTINUE
 
     def process_char_in_escape(self, c: str) -> Decision:
@@ -166,35 +165,33 @@ class Parser:
         return Decision.CONTINUE
 
     def process_char_in_field(self, c: str) -> Decision:
-        match c:
-            case "\r":
-                self.save_field()
-                self.state = ParserState.EAT_NEWLINE
-            case "\n":
-                self.save_field()
-                self.state = ParserState.START_RECORD
-                return Decision.DONE
-            case self.dialect.escapechar:
-                self.state = ParserState.ESCAPE
-            case self.dialect.delimiter:
-                self.save_field()
-                self.state = ParserState.START_FIELD
-            case _:
-                self.add_char(c)
+        if c == "\r":
+            self.save_field()
+            self.state = ParserState.EAT_NEWLINE
+        elif c == "\n":
+            self.save_field()
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        elif c == self.dialect.escapechar:
+            self.state = ParserState.ESCAPE
+        elif c == self.dialect.delimiter:
+            self.save_field()
+            self.state = ParserState.START_FIELD
+        else:
+            self.add_char(c)
         return Decision.CONTINUE
 
     def process_char_in_quoted_field(self, c: str) -> Decision:
-        match c:
-            case self.dialect.escapechar:
-                self.state = ParserState.ESCAPE_IN_QUOTED
-            case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
-                # XXX: Is this check for quoting necessary?
-                if self.dialect.doublequote:
-                    self.state = ParserState.QUOTE_IN_QUOTED
-                else:
-                    self.state = ParserState.IN_FIELD
-            case _:
-                self.add_char(c)
+        if c == self.dialect.escapechar:
+            self.state = ParserState.ESCAPE_IN_QUOTED
+        elif c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            # XXX: Is this check for quoting necessary?
+            if self.dialect.doublequote:
+                self.state = ParserState.QUOTE_IN_QUOTED
+            else:
+                self.state = ParserState.IN_FIELD
+        else:
+            self.add_char(c)
         return Decision.CONTINUE
 
     def process_char_in_escape_in_quoted(self, c: str) -> Decision:
@@ -203,28 +200,27 @@ class Parser:
         return Decision.CONTINUE
 
     def process_char_in_quote_in_quoted(self, c: str) -> Decision:
-        match c:
-            case self.dialect.quotechar if self.dialect.quoting != QUOTE_NONE:
-                # XXX: Is this check for quoting necessary?
-                self.add_char(c)  # type: ignore | wtf
-                self.state = ParserState.IN_QUOTED_FIELD
-            case self.dialect.delimiter:
-                self.save_field()
-                self.state = ParserState.START_FIELD
-            case "\r":
-                self.save_field()
-                self.state = ParserState.EAT_NEWLINE
-            case "\n":
-                self.save_field()
-                self.state = ParserState.START_RECORD
-                return Decision.DONE
-            case _ if not self.dialect.strict:
-                self.add_char(c)
-                self.state = ParserState.IN_FIELD
-            case _:
-                raise csv.Error(
-                    f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}"
-                )
+        if c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            # XXX: Is this check for quoting necessary?
+            self.add_char(c)  # type: ignore | wtf
+            self.state = ParserState.IN_QUOTED_FIELD
+        elif c == self.dialect.delimiter:
+            self.save_field()
+            self.state = ParserState.START_FIELD
+        elif c == "\r":
+            self.save_field()
+            self.state = ParserState.EAT_NEWLINE
+        elif c == "\n":
+            self.save_field()
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        elif not self.dialect.strict:
+            self.add_char(c)
+            self.state = ParserState.IN_FIELD
+        else:
+            raise csv.Error(
+                f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}"
+            )
         return Decision.CONTINUE
 
     def process_char_in_eat_newline(self, c: str) -> Decision:
