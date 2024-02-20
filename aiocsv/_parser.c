@@ -800,8 +800,6 @@ static PyObject* Parser_next(Parser* self) {
 //       with PyType_GetModuleState, but on 3.8 the module needs to be passed around directly
 //       from the fake constructor-function.
 
-static PyMethodDef ParserMethods[] = {{NULL, NULL}};
-
 static PyMemberDef ParserMembers[] = {
     {"line_num", T_UINT, offsetof(Parser, line_num), 0,
      "Line number of the recently-returned row"},
@@ -814,7 +812,6 @@ static PyType_Slot ParserSlots[] = {
     {Py_tp_clear, Parser_clear},
     {Py_tp_dealloc, Parser_dealloc},
     {Py_tp_members, ParserMembers},
-    {Py_tp_methods, ParserMethods},
     {Py_am_await, Py_NewRef},  // Return "self" unchanged
     {Py_am_aiter, Py_NewRef},  // Return "self" unchanged
     {Py_am_anext, Py_NewRef},  // Return "self" unchanged
