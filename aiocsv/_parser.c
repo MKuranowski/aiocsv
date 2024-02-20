@@ -213,11 +213,6 @@ int Dialect_init(Dialect* d, PyObject* o) {
     return 1;
 }
 
-#define PARSER_BUFFER_CAPACITY 4096
-static_assert(
-    PARSER_BUFFER_CAPACITY <= USHRT_MAX,
-    "Parser buffer is indexed by unsigned short - capacity must be smaller than USHRT_MAX");
-
 typedef struct {
     // clang-format off
     PyObject_HEAD
@@ -234,8 +229,15 @@ typedef struct {
     /// Generator[Any, None, str] if waiting for a read, NULL otherwise.
     PyObject* current_read;
 
-    /// Data returned by the latest read
-    Py_UCS4 buffer[PARSER_BUFFER_CAPACITY];
+    /// Data returned by the latest read. If not null, must be of at least
+    /// `module->io_default_buffer_size` bytes.
+    Py_UCS4* buffer;
+
+    /// Number of valid characters in buffer
+    Py_ssize_t buffer_len;
+
+    /// Offset into buffer to the first valid character
+    Py_ssize_t buffer_idx;
 
     /// list[str] with parsed fields from the current record. Lazily allocated, may be NULL.
     PyObject* record_so_far;
@@ -259,12 +261,6 @@ typedef struct {
     /// a one-based line number of the last-encountered line.
     unsigned int line_num;
 
-    /// Number of valid characters in buffer
-    unsigned short buffer_len;
-
-    /// Offset into buffer to the first valid character
-    unsigned short buffer_idx;
-
     /// ParserState for the parser state machine.
     unsigned char state;
 
@@ -284,6 +280,10 @@ static void Parser_dealloc(Parser* self) {
     PyTypeObject* tp = Py_TYPE(self);
     PyObject_GC_UnTrack(self);
     tp->tp_clear((PyObject*)self);
+    if (self->buffer) {
+        PyMem_Free(self->buffer);
+        self->buffer = NULL;
+    }
     if (self->field_so_far) {
         PyMem_Free(self->field_so_far);
         self->field_so_far = NULL;
@@ -349,12 +349,13 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
 
     self->current_read = NULL;
     self->record_so_far = NULL;
+    self->buffer = NULL;
+    self->buffer_len = 0;
+    self->buffer_idx = 0;
     self->field_so_far = NULL;
     self->field_so_far_capacity = 0;
     self->field_so_far_len = 0;
     self->line_num = 0;
-    self->buffer_len = 0;
-    self->buffer_idx = 0;
     self->state = STATE_START_RECORD;
     self->field_was_numeric = false;
     self->last_char_was_cr = false;
@@ -643,7 +644,7 @@ static int Parser_initiate_read(Parser* self) {
     name = PyUnicode_FromStringAndSize("read", 4);
     if (!name) FINISH_WITH(0);
 
-    len = PyLong_FromLong(PARSER_BUFFER_CAPACITY);
+    len = PyLong_FromLong(module_get_state(self->module)->io_default_buffer_size);
     if (!len) FINISH_WITH(0);
 
     read_coro = PyObject_CallMethodOneArg(self->reader, name, len);
@@ -732,6 +733,7 @@ static int Parser_copy_to_buffer(Parser* self, PyObject* unicode) {
         FINISH_WITH(0);
     }
 
+    Py_ssize_t cap = module_get_state(self->module)->io_default_buffer_size;
     Py_ssize_t len = PyUnicode_GetLength(unicode);
     if (len < 0) {
         FINISH_WITH(0);
@@ -739,15 +741,23 @@ static int Parser_copy_to_buffer(Parser* self, PyObject* unicode) {
         self->buffer_len = 0;
         self->buffer_idx = 0;
         self->eof = true;
-    } else if (len <= PARSER_BUFFER_CAPACITY) {
-        if (!PyUnicode_AsUCS4(unicode, self->buffer, PARSER_BUFFER_CAPACITY, false))
-            FINISH_WITH(0);
-        self->buffer_len = (unsigned short)len;
+    } else if (len <= cap) {
+        // Allocate the buffer if it was not allocated beforehand
+        if (!self->buffer) {
+            PyMem_Resize(self->buffer, Py_UCS4, cap);
+            if (!self->buffer) {
+                PyErr_NoMemory();
+                FINISH_WITH(0);
+            }
+        }
+
+        if (!PyUnicode_AsUCS4(unicode, self->buffer, cap, false)) FINISH_WITH(0);
+        self->buffer_len = len;
         self->buffer_idx = 0;
     } else {
         PyErr_Format(PyExc_ValueError,
-                     "reader has read %zi bytes, which is more than the requested %i bytes", len,
-                     PARSER_BUFFER_CAPACITY);
+                     "reader has read %zi bytes, which is more than the requested %zi bytes", len,
+                     cap);
         FINISH_WITH(0);
     }
 
