@@ -13,6 +13,13 @@
         goto ret;               \
     } while (0)
 
+/// A character which can't appear in a string
+#define NO_CHAR (Py_UCS4) - 1
+
+// ************************
+// * PYTHON API BACKPORTS *
+// ************************
+
 #if PY_VERSION_HEX < 0x03090000
 
 static inline PyObject* PyObject_CallMethodOneArg(PyObject* self, PyObject* name, PyObject* arg) {
@@ -59,13 +66,15 @@ static PyObject* _fetch_stop_iteration_value(void) {
     return value;
 }
 
-static PySendResult PyIter_Send(PyObject *iter, PyObject *arg, PyObject **presult) {
+static PySendResult PyIter_Send(PyObject* iter, PyObject* arg, PyObject** presult) {
     assert(arg);
     assert(presult);
 
     // Ensure arg is Py_None
     if (arg != Py_None) {
-        PyErr_SetString(PyExc_SystemError, "aiocsv's PyIter_Send backport doesn't support sending values other than None");
+        PyErr_SetString(
+            PyExc_SystemError,
+            "aiocsv's PyIter_Send backport doesn't support sending values other than None");
         return PYGEN_ERROR;
     }
 
@@ -84,6 +93,12 @@ static PySendResult PyIter_Send(PyObject *iter, PyObject *arg, PyObject **presul
 
 #endif
 
+// ***************
+// * DEFINITIONS *
+// ***************
+
+/// Data held by instances of the _parser module itself -
+/// objects imported from the builtin `csv` and `io` modules.
 typedef struct {
     /// csv.Error exception class
     PyObject* csv_error;
@@ -98,50 +113,8 @@ typedef struct {
     PyTypeObject* parser_type;
 } ModuleState;
 
+/// Returns a ModuleState* corresponding to a provided PyObject* representing a module
 #define module_get_state(m) ((ModuleState*)PyModule_GetState(m))
-
-static int module_clear(PyObject* module) {
-    ModuleState* state = module_get_state(module);
-    if (state) {
-        Py_CLEAR(state->csv_error);
-        Py_CLEAR(state->csv_field_size_limit);
-    }
-    return 0;
-}
-
-static int module_traverse(PyObject* module, visitproc visit, void* arg) {
-    ModuleState* state = module_get_state(module);
-    if (state) {
-        Py_VISIT(state->csv_error);
-        Py_VISIT(state->csv_field_size_limit);
-    }
-    return 0;
-}
-
-static void module_free(void* module) { module_clear((PyObject*)module); }
-
-// Parser implements the outer AsyncIterator[List[str]] protocol (__aiter__ + __anext__),
-// but, to avoid allocating new object on each call to __anext__, Parser returns itself from
-// __anext__. So, Parser also implements Awaitable[list[str]] (which also returns itself) and
-// Generator[Any, None, List[str]].
-//
-// The full interface looks like this:
-// ```py
-// class Parser:
-//     reader: WithAsyncRead
-//     current_read: Generator[Any, None, str] | None: ...
-//     line_number: int
-//
-//     def __init__(self, __r: WithAsyncRead, __d: DialectLike) -> None: ...
-//     def __aiter__(self) -> Self: ...
-//     def __anext__(self) -> Self: ...
-//     def __await__(self) -> Self: ...
-//     def __iter__(self) -> Self: ...
-//     def __next__(self) -> list[str]: ...
-// ```
-
-/// A character which can't appear in a string
-#define NO_CHAR (Py_UCS4) - 1
 
 typedef enum {
     QUOTE_MINIMAL = 0,
@@ -187,6 +160,7 @@ typedef enum {
     DECISION_ERROR,
 } Decision;
 
+/// C-friendly container for dialect parameters.
 typedef struct {
     Py_UCS4 delimiter;
     Py_UCS4 quotechar;
@@ -196,6 +170,77 @@ typedef struct {
     bool skipinitialspace;
     bool strict;
 } Dialect;
+
+// Parser implements the outer AsyncIterator[List[str]] protocol (__aiter__ + __anext__),
+// but, to avoid allocating new object on each call to __anext__, Parser returns itself from
+// __anext__. So, Parser also implements Awaitable[List[str]] (which also returns itself) and
+// Generator[Any, None, List[str]].
+typedef struct {
+    // clang-format off
+    PyObject_HEAD
+
+    /// Pointer to the _parser module. Required for 3.8 compatibility.
+    ///
+    /// TODO: Drop field once support for 3.8 is dropped.
+    ///       PyType_GetModuleState(Py_TYPE(self)) should be used instead.
+    PyObject* module;
+
+    /// Anything with a `async def read(self, n: int) -> str` method.
+    PyObject* reader;
+
+    /// Generator[Any, None, str] if waiting for a read, NULL otherwise.
+    PyObject* current_read;
+
+    /// Data returned by the latest read. If not null, must be of at least
+    /// `module->io_default_buffer_size` bytes.
+    Py_UCS4* buffer;
+
+    /// Number of valid characters in buffer
+    Py_ssize_t buffer_len;
+
+    /// Offset into buffer to the first valid character
+    Py_ssize_t buffer_idx;
+
+    /// list[str] with parsed fields from the current record. Lazily allocated, may be NULL.
+    PyObject* record_so_far;
+
+    /// PyMem-allocated buffer for characters of the current field.
+    Py_UCS4* field_so_far;
+
+    /// Capacity of `field_so_far`.
+    Py_ssize_t field_so_far_capacity;
+
+    /// Number of characters in `field_so_far`.
+    Py_ssize_t field_so_far_len;
+
+    /// C-friendly representation of the csv dialect.
+    Dialect dialect;
+
+    /// Limit for the field size
+    long field_size_limit;
+
+    /// Zero-based line number of the current position, which is equivalent to
+    /// a one-based line number of the last-encountered line.
+    unsigned int line_num;
+
+    /// ParserState for the parser state machine.
+    unsigned char state;
+
+    /// True if current field should be interpreted as a float.
+    bool field_was_numeric;
+
+    /// True if last returned character was a CR, used to avoid counting CR-LF as two separate lines.
+    bool last_char_was_cr;
+
+    /// True if eof has been hit in the underlying reader.
+    bool eof;
+
+    // clang-format on
+} Parser;
+
+// **************************
+// * DIALECT IMPLEMENTATION *
+// **************************
 
 #define dialect_init_char(d, o, attr_name)                                                  \
     PyObject* attr_name = PyObject_GetAttrString((o), #attr_name);                          \
@@ -264,68 +309,11 @@ int Dialect_init(Dialect* d, PyObject* o) {
     return 1;
 }
 
-typedef struct {
-    // clang-format off
-    PyObject_HEAD
+// *************************
+// * PARSER IMPLEMENTATION *
+// *************************
 
-    /// Pointer to the _parser module. Required for 3.8 compatibility.
-    ///
-    /// TODO: Drop field once support for 3.8 is dropped.
-    ///       PyType_GetModuleState(Py_TYPE(self)) should be used instead.
-    PyObject* module;
-
-    /// Anything with a `async def read(self, n: int) -> str` method.
-    PyObject* reader;
-
-    /// Generator[Any, None, str] if waiting for a read, NULL otherwise.
-    PyObject* current_read;
-
-    /// Data returned by the latest read. If not null, must be of at least
-    /// `module->io_default_buffer_size` bytes.
-    Py_UCS4* buffer;
-
-    /// Number of valid characters in buffer
-    Py_ssize_t buffer_len;
-
-    /// Offset into buffer to the first valid character
-    Py_ssize_t buffer_idx;
-
-    /// list[str] with parsed fields from the current record. Lazily allocated, may be NULL.
-    PyObject* record_so_far;
-
-    /// PyMem-allocated buffer for characters of the current field.
-    Py_UCS4* field_so_far;
-
-    /// Capacity of `field_so_far`.
-    Py_ssize_t field_so_far_capacity;
-
-    /// Number of characters in `field_so_far`.
-    Py_ssize_t field_so_far_len;
-
-    /// C-friendly representation of the csv dialect.
-    Dialect dialect;
-
-    /// Limit for the field size
-    long field_size_limit;
-
-    /// Zero-based line number of the current position, which is equivalent to
-    /// a one-based line number of the last-encountered line.
-    unsigned int line_num;
-
-    /// ParserState for the parser state machine.
-    unsigned char state;
-
-    /// True if current field should be interpreted as a float.
-    bool field_was_numeric;
-
-    /// True if last returned character was a CR, used to avoid counting CR-LF as two separate lines.
-    bool last_char_was_cr;
-
-    /// True if eof has been hit in the underlying reader.
-    bool eof;
-
-    // clang-format on
-} Parser;
+// *** PyObject Interface ***
 
 static void Parser_dealloc(Parser* self) {
     PyTypeObject* tp = Py_TYPE(self);
@@ -415,6 +403,8 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
     PyObject_GC_Track(self);
     return (PyObject*)self;
 }
+
+// *** Parsing ***
 
 static int Parser_add_char(Parser* self, Py_UCS4 c) {
     if (self->field_so_far_len == self->field_size_limit) {
@@ -684,6 +674,8 @@ static PyObject* Parser_try_parse(Parser* self) {
     return NULL;
 }
 
+// *** Reading Data ***
+
 static int Parser_initiate_read(Parser* self) {
     assert(!self->current_read);
 
@@ -800,6 +792,8 @@ static PyObject* Parser_next(Parser* self) {
     return NULL;
 }
 
+// *** Type Specification ***
+
 // TODO: Once support 3.8 is dropped, the "Parser" function can be replaced by
 //       normal .tp_new and .tp_init members on the "_Parser" type.
 //       Starting with 3.9 it's possible to access modules state from the _Parser type
@@ -837,6 +831,30 @@ static PyType_Spec ParserSpec = {
               Py_TPFLAGS_DISALLOW_INSTANTIATION),
     .slots = ParserSlots,
 };
+
+// *************************
+// * MODULE IMPLEMENTATION *
+// *************************
+
+static int module_clear(PyObject* module) {
+    ModuleState* state = module_get_state(module);
+    if (state) {
+        Py_CLEAR(state->csv_error);
+        Py_CLEAR(state->csv_field_size_limit);
+    }
+    return 0;
+}
+
+static int module_traverse(PyObject* module, visitproc visit, void* arg) {
+    ModuleState* state = module_get_state(module);
+    if (state) {
+        Py_VISIT(state->csv_error);
+        Py_VISIT(state->csv_field_size_limit);
+    }
+    return 0;
+}
+
+static void module_free(void* module) { module_clear((PyObject*)module); }
 
 static int module_exec(PyObject* module) {
     int result = 0;
@@ -894,7 +912,7 @@ static PyModuleDef_Slot ModuleSlots[] = {
     {0, NULL},
 };
 
-static PyModuleDef Module = {
+static PyModuleDef ModuleDef = {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "_parser",
     .m_doc = "_parser implements asynchronous CSV record parsing",
@@ -906,4 +924,4 @@ static PyModuleDef Module = {
     .m_free = module_free,
 };
 
-PyMODINIT_FUNC PyInit__parser(void) { return PyModuleDef_Init(&Module); }
+PyMODINIT_FUNC PyInit__parser(void) { return PyModuleDef_Init(&ModuleDef); }
