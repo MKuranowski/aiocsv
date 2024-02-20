@@ -76,6 +76,9 @@ asyncio.run(main())
 - Readers accept objects with async `read` methods, instead of an AsyncIterable over lines
     from a file.
 - `AsyncDictReader.fieldnames` can be `None` - use `await AsyncDictReader.get_fieldnames()` instead.
+- Changes to `csv.field_size_limit` are not picked up by existing Reader instances.
+    The field size limit is cached on Reader instantiation to avoid expensive function calls
+    on each character of the input.
 
 
 ## Reference
