@@ -801,7 +801,7 @@ static PyObject* Parser_next(Parser* self) {
 //       from the fake constructor-function.
 
 static PyMemberDef ParserMembers[] = {
-    {"line_num", T_UINT, offsetof(Parser, line_num), 0,
+    {"line_num", T_UINT, offsetof(Parser, line_num), READONLY,
      "Line number of the recently-returned row"},
     {NULL},
 };
