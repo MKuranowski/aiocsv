@@ -1,3 +1,6 @@
+# © Copyright 2020-2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: MIT
+
 import csv
 from warnings import warn
 from typing import Dict, List, Optional, Sequence

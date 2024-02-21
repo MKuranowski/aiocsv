@@ -1,3 +1,6 @@
+# © Copyright 2020-2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: MIT
+
 __title__ = "aiocsv"
 __description__ = "Asynchronous CSV reading/writing"
 __version__ = "1.3.0-pre2"

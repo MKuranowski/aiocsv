@@ -1,3 +1,6 @@
+# © Copyright 2020-2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: MIT
+
 import csv
 import io
 from typing import Any, Iterable, Mapping, Sequence

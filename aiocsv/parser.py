@@ -1,3 +1,6 @@
+# © Copyright 2020-2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: MIT
+
 from enum import IntEnum, auto
 from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence, Union
 import csv

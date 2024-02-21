@@ -1,3 +1,6 @@
+# © Copyright 2020-2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: MIT
+
 from typing import Any, Optional, Protocol
 
 

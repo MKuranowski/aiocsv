@@ -1,3 +1,6 @@
+// © Copyright 2020-2024 Mikołaj Kuranowski
+// SPDX-License-Identifier: MIT
+
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
