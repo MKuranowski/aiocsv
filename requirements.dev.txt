@@ -1,8 +1,3 @@
-# For generating _parser.c only:
-# git+https://github.com/cython/cython@3.0.0b2
-
--r requirements.txt
-
 aiofiles
 pytest
 pytest-asyncio

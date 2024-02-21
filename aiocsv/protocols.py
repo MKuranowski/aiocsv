@@ -1,10 +1,4 @@
-from typing import Any, Union
-import sys
-
-if sys.version_info < (3, 8):
-    from typing_extensions import Protocol
-else:
-    from typing import Protocol
+from typing import Any, Optional, Protocol
 
 
 class WithAsyncWrite(Protocol):
@@ -12,4 +6,14 @@ class WithAsyncWrite(Protocol):
 
 
 class WithAsyncRead(Protocol):
-    async def read(self, __size: int) -> Union[str, bytes]: ...
+    async def read(self, __size: int) -> str: ...
+
+
+class DialectLike(Protocol):
+    delimiter: str
+    quotechar: Optional[str]
+    escapechar: Optional[str]
+    doublequote: bool
+    skipinitialspace: bool
+    quoting: int
+    strict: bool

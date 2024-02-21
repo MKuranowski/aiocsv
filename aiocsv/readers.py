@@ -4,10 +4,10 @@ from typing import Dict, List, Optional, Sequence
 from .protocols import WithAsyncRead
 
 try:
-    from ._parser import parser
+    from ._parser import Parser
 except ImportError:
-    warn("Using a slow, pure-python CSV parser")
-    from .parser import parser
+    warn("using slow, pure-Python parser")
+    from .parser import Parser
 
 
 class AsyncReader:
@@ -23,12 +23,11 @@ class AsyncReader:
         # this shit works, just let `csv` figure the dialects out.
         self.dialect = csv.reader("", **csvreaderparams).dialect
 
-        self._parser = parser(self._file, self.dialect)
+        self._parser = Parser(self._file, self.dialect)
 
     @property
     def line_num(self) -> int:
-        warn("aiocsv doesn't support the line_num attribute on readers")
-        return -1
+        return self._parser.line_num
 
     def __aiter__(self):
         return self
@@ -60,6 +59,20 @@ class AsyncDictReader:
     @property
     def line_num(self) -> int:
         return self.reader.line_num
+
+    async def get_fieldnames(self) -> List[str]:
+        """Gets the fieldnames of the CSV file being read.
+
+        This function forces a read of the fieldnames if they
+        are not yet available and should be preferred over directly
+        accessing the fieldnames property.
+        """
+        if self.fieldnames is None:
+            try:
+                self.fieldnames = await self.reader.__anext__()
+            except StopAsyncIteration:
+                self.fieldnames = []
+        return self.fieldnames
 
     def __aiter__(self):
         return self

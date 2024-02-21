@@ -23,6 +23,14 @@ async def test_simple_read():
 
 
 @pytest.mark.asyncio
+async def test_simple_line_nums():
+    async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as af:
+        r = AsyncReader(af)
+        read_rows_and_line_nums = [(i, r.line_num) async for i in r]
+        assert read_rows_and_line_nums == [(row, i) for i, row in enumerate(VALUES, start=1)]
+
+
+@pytest.mark.asyncio
 async def test_simple_write():
     # Create a TempFile to direct writer to
     with NamedTemporaryFile(mode="w+", suffix=".csv", delete=False) as tf:

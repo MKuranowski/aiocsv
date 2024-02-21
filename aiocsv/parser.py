@@ -1,186 +1,282 @@
-import enum
+from enum import IntEnum, auto
+from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence
 import csv
-from typing import AsyncIterator, List
 
-from .protocols import WithAsyncRead
-
-# Amout of bytes to be read when consuming streams in Reader instances
-READ_SIZE: int = 2048
+from .protocols import DialectLike, WithAsyncRead
 
 
-class ParserState(enum.Enum):
-    AFTER_ROW = enum.auto()
-    AFTER_DELIM = enum.auto()
-    IN_CELL = enum.auto()
-    ESCAPE = enum.auto()
-    IN_CELL_QUOTED = enum.auto()
-    ESCAPE_QUOTED = enum.auto()
-    QUOTE_IN_QUOTED = enum.auto()
-    EAT_NEWLINE = enum.auto()
+class ParserState(IntEnum):
+    START_RECORD = auto()
+    START_FIELD = auto()
+    IN_FIELD = auto()
+    ESCAPE = auto()
+    IN_QUOTED_FIELD = auto()
+    ESCAPE_IN_QUOTED = auto()
+    QUOTE_IN_QUOTED = auto()
+    EAT_NEWLINE = auto()
+
+    def is_end_of_record(self) -> bool:
+        return self is ParserState.START_RECORD or self is ParserState.EAT_NEWLINE
 
 
-async def parser(reader: WithAsyncRead, dialect: csv.Dialect) -> AsyncIterator[List[str]]:
-    state: ParserState = ParserState.AFTER_DELIM
+class Decision(IntEnum):
+    CONTINUE = auto()
+    DONE = auto()
+    DONE_WITHOUT_CONSUMING = auto()
 
-    data = await reader.read(READ_SIZE)
-    if not isinstance(data, str):
-        raise TypeError("file wasn't opened in text mode")
 
-    force_save_cell: bool = False
-    numeric_cell: bool = False
-    row: List[str] = []
-    cell: str = ""
+QUOTE_MINIMAL = csv.QUOTE_MINIMAL
+QUOTE_ALL = csv.QUOTE_ALL
+QUOTE_NONNUMERIC = csv.QUOTE_NONNUMERIC
+QUOTE_NONE = csv.QUOTE_NONE
 
-    # Iterate while the reader gives out data
-    while data:
 
-        # Iterate charachter-by-charachter over the input file
-        # and update the parser state
-        for char in data:
+class Parser:
+    def __init__(self, reader: WithAsyncRead, dialect: DialectLike) -> None:
+        self.dialect = dialect
+        self.reader = reader
 
-            # Switch case depedning on the state
+        self.current_read: Optional[Generator[Any, None, str]] = None
+        self.buffer: str = ""
+        self.eof: bool = False
+        self.line_num: int = 0
 
-            if state == ParserState.EAT_NEWLINE:
-                if char == '\r' or char == '\n':
-                    continue
-                state = ParserState.AFTER_ROW
-            # (fallthrough)
+        self.state = ParserState.START_RECORD
+        self.record_so_far: List[str] = []
+        self.field_so_far: List[str] = []
+        self.field_limit: int = csv.field_size_limit()
+        self.field_was_numeric: bool = False
+        self.last_char_was_cr: bool = False
 
-            if state == ParserState.AFTER_ROW:
-                yield row
-                row = []
-                state = ParserState.AFTER_DELIM
+    # AsyncIterator[List[str]] interface
 
-            # (fallthrough)
-            if state == ParserState.AFTER_DELIM:
-                # -- After the end of a field or a row --
+    def __aiter__(self) -> AsyncIterator[List[str]]:
+        return self
 
-                # 1. We were asked to skip whitespace right after the delimiter
-                if dialect.skipinitialspace and char == ' ':
-                    force_save_cell = True
+    def __anext__(self) -> Awaitable[List[str]]:
+        return self
 
-                # 2. Empty field + End of row
-                elif char == '\r' or char == '\n':
-                    if len(row) > 0 or force_save_cell:
-                        row.append(cell)
-                    state = ParserState.EAT_NEWLINE
+    # Awaitable[List[str]] interface
 
-                # 3. Empty field
-                elif char == dialect.delimiter:
-                    row.append(cell)
-                    cell = ""
-                    force_save_cell = False
-                    # state stays unchanged (AFTER_DELIM)
+    def __await__(self) -> Generator[Any, None, List[str]]:
+        return self  # type: ignore
 
-                # 4. Start of a quoted cell
-                elif char == dialect.quotechar and dialect.quoting != csv.QUOTE_NONE:
-                    state = ParserState.IN_CELL_QUOTED
+    # Generator[Any, None, List[str]] interface
 
-                # 5. Start of an escape in an unqoted field
-                elif char == dialect.escapechar:
-                    state = ParserState.ESCAPE
+    def __iter__(self) -> Generator[Any, None, List[str]]:
+        return self  # type: ignore
 
-                # 6. Start of an unquoted field
-                else:
-                    cell += char
-                    state = ParserState.IN_CELL
-                    numeric_cell = dialect.quoting == csv.QUOTE_NONNUMERIC
+    def __next__(self) -> Any:
+        # Loop until a record has been successfully parsed or EOF has been hit
+        record: Optional[List[str]] = None
+        while record is None and (self.buffer or not self.eof):
+            # No pending read and no data available - initiate one
+            if not self.buffer and self.current_read is None:
+                self.current_read = self.reader.read(4096).__await__()
 
-            elif state == ParserState.IN_CELL:
-                # -- Inside an unqouted cell --
+            # Await on the pending read
+            if self.current_read is not None:
+                try:
+                    return next(self.current_read)
+                except StopIteration as e:
+                    assert not self.buffer, "a read was pending even though data was available"
+                    self.current_read.close()
+                    self.current_read = None
+                    self.buffer = e.value
+                    self.eof = not e.value
 
-                # 1. End of a row
-                if char == '\r' or char == '\n':
-                    row.append(float(cell) if numeric_cell else cell)  # type: ignore
+            # Advance parsing
+            record = self.try_parse()
 
-                    cell = ""
-                    force_save_cell = False
-                    numeric_cell = False
-                    state = ParserState.EAT_NEWLINE
+        # Generate a row, or stop iteration altogether
+        if record is None:
+            raise StopAsyncIteration
+        else:
+            raise StopIteration(record)
 
-                # 2. End of a cell
-                elif char == dialect.delimiter:
-                    row.append(float(cell) if numeric_cell else cell)  # type: ignore
+    # Straightforward parser interface
 
-                    cell = ""
-                    force_save_cell = False
-                    numeric_cell = False
-                    state = ParserState.AFTER_DELIM
+    def try_parse(self) -> Optional[List[str]]:
+        decision = Decision.CONTINUE
 
-                # 3. Start of an espace
-                elif char == dialect.escapechar:
-                    state = ParserState.ESCAPE
+        while decision is Decision.CONTINUE and self.buffer:
+            decision = self.process_char(self.get_char_and_increment_line_num())
+            if decision is not Decision.DONE_WITHOUT_CONSUMING:
+                self.buffer = self.buffer[1:]
 
-                # 4. Normal char
-                else:
-                    cell += char
+        if decision is not Decision.CONTINUE or (self.eof and not self.state.is_end_of_record()):
+            self.add_field_at_eof()
+            return self.extract_record()
+        else:
+            return None
 
-            elif state == ParserState.ESCAPE:
-                cell += char
-                state = ParserState.IN_CELL
+    def process_char(self, c: str) -> Decision:
+        if self.state == ParserState.START_RECORD:
+            return self.process_char_in_start_record(c)
+        elif self.state == ParserState.START_FIELD:
+            return self.process_char_in_start_field(c)
+        elif self.state == ParserState.ESCAPE:
+            return self.process_char_in_escape(c)
+        elif self.state == ParserState.IN_FIELD:
+            return self.process_char_in_field(c)
+        elif self.state == ParserState.IN_QUOTED_FIELD:
+            return self.process_char_in_quoted_field(c)
+        elif self.state == ParserState.ESCAPE_IN_QUOTED:
+            return self.process_char_in_escape_in_quoted(c)
+        elif self.state == ParserState.QUOTE_IN_QUOTED:
+            return self.process_char_in_quote_in_quoted(c)
+        elif self.state == ParserState.EAT_NEWLINE:
+            return self.process_char_in_eat_newline(c)
+        else:
+            raise RuntimeError(f"unhandled parser state: {self.state}")
 
-            elif state == ParserState.IN_CELL_QUOTED:
-                # -- Inside a quoted cell --
+    def process_char_in_start_record(self, c: str) -> Decision:
+        if c == "\r":
+            self.state = ParserState.EAT_NEWLINE
+            return Decision.CONTINUE
+        elif c == "\n":
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        else:
+            return self.process_char_in_start_field(c)
 
-                # 1. Start of an escape
-                if char == dialect.escapechar:
-                    state = ParserState.ESCAPE_QUOTED
+    def process_char_in_start_field(self, c: str) -> Decision:
+        if c == "\r":
+            self.save_field()
+            self.state = ParserState.EAT_NEWLINE
+        elif c == "\n":
+            self.save_field()
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        elif c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            self.state = ParserState.IN_QUOTED_FIELD
+        elif c == self.dialect.escapechar:
+            self.state = ParserState.ESCAPE
+        # XXX: skipinitialspace handling is done in save_field()
+        elif c == self.dialect.delimiter:
+            self.save_field()
+            self.state = ParserState.START_FIELD
+        else:
+            self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
+            self.add_char(c)
+            self.state = ParserState.IN_FIELD
+        return Decision.CONTINUE
 
-                # 2. Quotechar
-                elif dialect.quoting != csv.QUOTE_NONE and char == dialect.quotechar \
-                        and dialect.doublequote:
-                    state = ParserState.QUOTE_IN_QUOTED
+    def process_char_in_escape(self, c: str) -> Decision:
+        self.add_char(c)
+        self.state = ParserState.IN_FIELD
+        return Decision.CONTINUE
 
-                # 3. Every other char
-                else:
-                    cell += char
+    def process_char_in_field(self, c: str) -> Decision:
+        if c == "\r":
+            self.save_field()
+            self.state = ParserState.EAT_NEWLINE
+        elif c == "\n":
+            self.save_field()
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        elif c == self.dialect.escapechar:
+            self.state = ParserState.ESCAPE
+        elif c == self.dialect.delimiter:
+            self.save_field()
+            self.state = ParserState.START_FIELD
+        else:
+            self.add_char(c)
+        return Decision.CONTINUE
 
-            elif state == ParserState.ESCAPE_QUOTED:
-                cell += char
-                state = ParserState.IN_CELL_QUOTED
-
-            elif state == ParserState.QUOTE_IN_QUOTED:
-                # -- Quotechar in a quoted field --
-                # This state can only be entered with doublequote on
-
-                # 1. Double-quote
-                if char == dialect.quotechar:
-                    cell += char
-                    state = ParserState.IN_CELL_QUOTED
-
-                # 2. End of a row
-                elif char == '\r' or char == '\n':
-                    row.append(cell)
-                    cell = ""
-                    force_save_cell = False
-                    state = ParserState.EAT_NEWLINE
-
-                # 3. End of a cell
-                elif char == dialect.delimiter:
-                    row.append(cell)
-                    cell = ""
-                    force_save_cell = False
-                    state = ParserState.AFTER_DELIM
-
-                # 4. Unescaped quotechar
-                else:
-                    cell += char
-                    state = ParserState.IN_CELL
-
-                    if dialect.strict:
-                        raise csv.Error(
-                            f"'{dialect.delimiter}' expected after '{dialect.quotechar}'"
-                        )
-
+    def process_char_in_quoted_field(self, c: str) -> Decision:
+        if c == self.dialect.escapechar:
+            self.state = ParserState.ESCAPE_IN_QUOTED
+        elif c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            # XXX: Is this check for quoting necessary?
+            if self.dialect.doublequote:
+                self.state = ParserState.QUOTE_IN_QUOTED
             else:
-                raise RuntimeError("wtf")
+                self.state = ParserState.IN_FIELD
+        else:
+            self.add_char(c)
+        return Decision.CONTINUE
 
-        # Read more data
-        data = await reader.read(READ_SIZE)
-        if not isinstance(data, str):
-            raise TypeError("file wasn't opened in text mode")
+    def process_char_in_escape_in_quoted(self, c: str) -> Decision:
+        self.add_char(c)
+        self.state = ParserState.IN_QUOTED_FIELD
+        return Decision.CONTINUE
 
-    if cell or force_save_cell:
-        row.append(float(cell) if numeric_cell else cell)  # type: ignore
-    if row:
-        yield row
+    def process_char_in_quote_in_quoted(self, c: str) -> Decision:
+        if c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            # XXX: Is this check for quoting necessary?
+            self.add_char(c)  # type: ignore | wtf
+            self.state = ParserState.IN_QUOTED_FIELD
+        elif c == self.dialect.delimiter:
+            self.save_field()
+            self.state = ParserState.START_FIELD
+        elif c == "\r":
+            self.save_field()
+            self.state = ParserState.EAT_NEWLINE
+        elif c == "\n":
+            self.save_field()
+            self.state = ParserState.START_RECORD
+            return Decision.DONE
+        elif not self.dialect.strict:
+            self.add_char(c)
+            self.state = ParserState.IN_FIELD
+        else:
+            raise csv.Error(
+                f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}"
+            )
+        return Decision.CONTINUE
+
+    def process_char_in_eat_newline(self, c: str) -> Decision:
+        self.state = ParserState.START_RECORD
+        return Decision.DONE if c == "\n" else Decision.DONE_WITHOUT_CONSUMING
+
+    def add_char(self, c: str) -> None:
+        if len(self.field_so_far) == self.field_limit:
+            raise csv.Error(f"field larger than field limit ({self.field_limit})")
+        self.field_so_far.append(c)
+
+    def save_field(self) -> None:
+        field: str | float | None
+        if self.dialect.skipinitialspace:
+            field = "".join(self.field_so_far[self.find_first_non_space(self.field_so_far):])
+        else:
+            field = "".join(self.field_so_far)
+
+        # Convert to float if QUOTE_NONNUMERIC
+        if self.dialect.quoting == QUOTE_NONNUMERIC and field and self.field_was_numeric:
+            self.field_was_numeric = False
+            field = float(field)
+
+        self.record_so_far.append(field)  # type: ignore
+        self.field_so_far.clear()
+
+    def add_field_at_eof(self) -> None:
+        # Decide if self.record_so_far needs to be added at an EOF
+        if not self.state.is_end_of_record():
+            self.save_field()
+
+    def extract_record(self) -> List[str]:
+        r = self.record_so_far.copy()
+        self.record_so_far.clear()
+        return r
+
+    def get_char_and_increment_line_num(self) -> str:
+        c = self.buffer[0]
+        if c == "\r":
+            self.line_num += 1
+            self.last_char_was_cr = True
+        elif c == "\n":
+            if self.last_char_was_cr:
+                self.last_char_was_cr = False
+            else:
+                self.line_num += 1
+        else:
+            self.last_char_was_cr = False
+        return c
+
+    @staticmethod
+    def find_first_non_space(x: Sequence[str]) -> int:
+        for i, c in enumerate(x):
+            if not c.isspace():
+                return i
+        return len(x)
