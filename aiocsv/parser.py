@@ -1,5 +1,5 @@
 from enum import IntEnum, auto
-from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence
+from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence, Union
 import csv
 
 from .protocols import DialectLike, WithAsyncRead
@@ -236,7 +236,7 @@ class Parser:
         self.field_so_far.append(c)
 
     def save_field(self) -> None:
-        field: str | float | None
+        field: Union[str, float, None]
         if self.dialect.skipinitialspace:
             field = "".join(self.field_so_far[self.find_first_non_space(self.field_so_far):])
         else:
