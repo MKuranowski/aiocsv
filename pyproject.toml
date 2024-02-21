@@ -22,11 +22,8 @@ classifiers = [
 Homepage = "https://github.com/MKuranowski/aiocsv"
 
 [tool.setuptools]
+packages = ["aiocsv"]
 zip-safe = false
-include-package-data = true
-
-[tool.setuptools.packages]
-find = {namespaces = true, exclude = ["tests", "tests.*"]}
 
 [tool.setuptools.package-data]
 aiocsv = ["py.typed"]
