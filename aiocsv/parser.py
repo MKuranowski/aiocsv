@@ -15,6 +15,9 @@ class ParserState(IntEnum):
     QUOTE_IN_QUOTED = auto()
     EAT_NEWLINE = auto()
 
+    def is_end_of_record(self) -> bool:
+        return self is ParserState.START_RECORD or self is ParserState.EAT_NEWLINE
+
 
 class Decision(IntEnum):
     CONTINUE = auto()
@@ -101,7 +104,7 @@ class Parser:
             if decision is not Decision.DONE_WITHOUT_CONSUMING:
                 self.buffer = self.buffer[1:]
 
-        if decision is not Decision.CONTINUE or (self.eof and self.state not in (ParserState.START_RECORD, ParserState.EAT_NEWLINE)):
+        if decision is not Decision.CONTINUE or (self.eof and not self.state.is_end_of_record()):
             self.add_field_at_eof()
             return self.extract_record()
         else:
@@ -249,7 +252,7 @@ class Parser:
 
     def add_field_at_eof(self) -> None:
         # Decide if self.record_so_far needs to be added at an EOF
-        if self.state not in (ParserState.START_RECORD, ParserState.EAT_NEWLINE):
+        if not self.state.is_end_of_record():
             self.save_field()
 
     def extract_record(self) -> List[str]:
