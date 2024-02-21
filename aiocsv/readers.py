@@ -21,9 +21,13 @@ class AsyncReader:
         # csv.Dialect isn't a class, instead it's a weird proxy
         # (at least in CPython) to _csv.Dialect. Instead of figuring how
         # this shit works, just let `csv` figure the dialects out.
-        self.dialect = csv.reader("", **csvreaderparams).dialect
+        self._dialect = csv.reader("", **csvreaderparams).dialect
 
-        self._parser = Parser(self._file, self.dialect)
+        self._parser = Parser(self._file, self._dialect)
+
+    @property
+    def dialect(self) -> csv.Dialect:
+        return self._dialect
 
     @property
     def line_num(self) -> int:
