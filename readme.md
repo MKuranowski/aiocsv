@@ -71,7 +71,8 @@ asyncio.run(main())
 
 ## Differences with `csv`
 
-`aiocsv` strives to be a drop-in replacement for Python's builtin [csv module](https://docs.python.org/3/library/csv.html). There are 2 notable differences:
+`aiocsv` strives to be a drop-in replacement for Python's builtin
+[csv module](https://docs.python.org/3/library/csv.html). However, there are 3 notable differences:
 
 - Readers accept objects with async `read` methods, instead of an AsyncIterable over lines
     from a file.
@@ -87,7 +88,7 @@ asyncio.run(main())
 ### aiocsv.AsyncReader
 `AsyncReader(asyncfile: aiocsv.protocols.WithAsyncRead, **csvreaderparams)`
 
-An object that iterates over lines in given asynchronous file.
+An object that iterates over records in the given asynchronous CSV file.
 Additional keyword arguments are understood as dialect parameters.
 
 Iterating over this object returns parsed CSV rows (`List[str]`).
@@ -96,11 +97,10 @@ Iterating over this object returns parsed CSV rows (`List[str]`).
 - `__aiter__(self) -> self`
 - `async __anext__(self) -> List[str]`
 
-*Properties*:
-- `dialect`: The csv.Dialect used when parsing
-
 *Read-only properties*:
-- `line_num`: Not implemented in aiocsv - issues a warning and always returns -1.
+- `dialect`: The csv.Dialect used when parsing
+- `line_num`: The number of lines read from the source file. This coincides with a 1-based index
+    of the line number of the last line of the recently parsed record.
 
 
 ### aiocsv.AsyncDictReader
@@ -114,7 +114,7 @@ AsyncDictReader(
 )
 ```
 
-An object that iterates over lines in given asynchronous file.
+An object that iterates over records in the given asynchronous CSV file.
 All arguments work exactly the same was as in csv.DictReader.
 
 Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
@@ -146,7 +146,8 @@ Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
 
 *Read-only properties*:
 - `dialect`: Link to `self.reader.dialect` - the current csv.Dialect
-- `line_num`: Not implemented in aiocsv - issues a warning and always returns -1
+- `line_num`: The number of lines read from the source file. This coincides with a 1-based index
+    of the line number of the last line of the recently parsed record.
 
 
 ### aiocsv.AsyncWriter
