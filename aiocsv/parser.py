@@ -21,6 +21,13 @@ class ParserState(IntEnum):
     def is_end_of_record(self) -> bool:
         return self is ParserState.START_RECORD or self is ParserState.EAT_NEWLINE
 
+    def is_unexpected_at_eof(self) -> bool:
+        return self in (
+            ParserState.ESCAPE,
+            ParserState.IN_QUOTED_FIELD,
+            ParserState.ESCAPE_IN_QUOTED,
+        )
+
 
 class Decision(IntEnum):
     CONTINUE = auto()
@@ -108,6 +115,8 @@ class Parser:
                 self.buffer = self.buffer[1:]
 
         if decision is not Decision.CONTINUE or (self.eof and not self.state.is_end_of_record()):
+            if self.dialect.strict and self.state.is_unexpected_at_eof():
+                raise csv.Error("unexpected end of data")
             self.add_field_at_eof()
             return self.extract_record()
         else:
@@ -255,6 +264,8 @@ class Parser:
 
     def add_field_at_eof(self) -> None:
         # Decide if self.record_so_far needs to be added at an EOF
+        if self.state in (ParserState.ESCAPE, ParserState.ESCAPE_IN_QUOTED):
+            self.add_char("\n")
         if not self.state.is_end_of_record():
             self.save_field()
 
