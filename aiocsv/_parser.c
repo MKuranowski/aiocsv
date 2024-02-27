@@ -148,6 +148,18 @@ static inline bool state_is_end_of_record(ParserState s) {
     }
 }
 
+static inline bool state_is_unexpected_at_eof(ParserState s) {
+    switch (s) {
+        case STATE_ESCAPE:
+        case STATE_IN_QUOTED_FIELD:
+        case STATE_ESCAPE_IN_QUOTED:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 typedef enum {
     /// Parsing should continue - row is not ready
     DECISION_CONTINUE,
@@ -477,6 +489,10 @@ static int Parser_save_field(Parser* self) {
 }
 
 static inline int Parser_add_field_at_eof(Parser* self) {
+    if (self->state == STATE_ESCAPE || self->state == STATE_ESCAPE_IN_QUOTED) {
+        if (!Parser_add_char(self, '\n')) return 0;
+    }
+
     if (!state_is_end_of_record(self->state)) return Parser_save_field(self);
     return 1;
 }
@@ -668,6 +684,11 @@ static PyObject* Parser_try_parse(Parser* self) {
     }
 
     if (decision != DECISION_CONTINUE || (self->eof && !state_is_end_of_record(self->state))) {
+        if (self->dialect.strict && state_is_unexpected_at_eof(self->state)) {
+            PyErr_SetString(module_get_state(self->module)->csv_error, "unexpected end of data");
+            return NULL;
+        }
+
         Parser_add_field_at_eof(self);
         return Parser_extract_record(self);
     }
