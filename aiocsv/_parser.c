@@ -109,8 +109,11 @@ typedef struct {
     /// csv.field_size_limit `() -> int` function
     PyObject* csv_field_size_limit;
 
-    /// io.DEFAULT_BUFFER_SIZE number
-    long io_default_buffer_size;
+    /// io.DEFAULT_BUFFER_SIZE PyLongObject
+    PyObject* io_default_buffer_size;
+
+    /// The string "read"
+    PyObject* str_read;
 
     /// Parser class exposed by this module
     PyTypeObject* parser_type;
@@ -700,18 +703,12 @@ static PyObject* Parser_try_parse(Parser* self) {
 static int Parser_initiate_read(Parser* self) {
     assert(!self->current_read);
 
-    PyObject* name = NULL;
-    PyObject* len = NULL;
     PyObject* read_coro = NULL;
     int result = 1;
 
-    name = PyUnicode_FromStringAndSize("read", 4);
-    if (!name) FINISH_WITH(0);
-
-    len = PyLong_FromLong(module_get_state(self->module)->io_default_buffer_size);
-    if (!len) FINISH_WITH(0);
-
-    read_coro = PyObject_CallMethodOneArg(self->reader, name, len);
+    ModuleState* module_state = module_get_state(self->module);
+    read_coro = PyObject_CallMethodOneArg(self->reader, module_state->str_read,
+                                          module_state->io_default_buffer_size);
     if (!read_coro) FINISH_WITH(0);
 
     PyAsyncMethods* coro_async_methods = Py_TYPE(read_coro)->tp_as_async;
@@ -725,9 +722,7 @@ static int Parser_initiate_read(Parser* self) {
     result = self->current_read ? 1 : 0;
 
 ret:
-    if (name) Py_DECREF(name);
-    if (len) Py_DECREF(len);
-    if (read_coro) Py_DECREF(read_coro);
+    Py_XDECREF(read_coro);
     return result;
 }
 
@@ -853,6 +848,8 @@ static int module_clear(PyObject* module) {
     if (state) {
         Py_CLEAR(state->csv_error);
         Py_CLEAR(state->csv_field_size_limit);
+        Py_CLEAR(state->io_default_buffer_size);
+        Py_CLEAR(state->str_read);
     }
     return 0;
 }
@@ -862,6 +859,8 @@ static int module_traverse(PyObject* module, visitproc visit, void* arg) {
     if (state) {
         Py_VISIT(state->csv_error);
         Py_VISIT(state->csv_field_size_limit);
+        Py_VISIT(state->io_default_buffer_size);
+        Py_VISIT(state->str_read);
     }
     return 0;
 }
@@ -872,9 +871,11 @@ static int module_exec(PyObject* module) {
     int result = 0;
     PyObject* csv_module = NULL;
     PyObject* io_module = NULL;
-    PyObject* io_default_buffer_size_obj = NULL;
 
     ModuleState* state = module_get_state(module);
+
+    state->str_read = PyUnicode_InternFromString("read");
+    if (!state->str_read) FINISH_WITH(-1);
 
     csv_module = PyImport_ImportModule("csv");
     if (!csv_module) FINISH_WITH(-1);
@@ -888,12 +889,12 @@ static int module_exec(PyObject* module) {
     io_module = PyImport_ImportModule("io");
     if (!io_module) FINISH_WITH(-1);
 
-    io_default_buffer_size_obj = PyObject_GetAttrString(io_module, "DEFAULT_BUFFER_SIZE");
-    if (!io_default_buffer_size_obj) FINISH_WITH(-1);
+    state->io_default_buffer_size = PyObject_GetAttrString(io_module, "DEFAULT_BUFFER_SIZE");
+    if (!state->io_default_buffer_size) FINISH_WITH(-1);
 
-    state->io_default_buffer_size = PyLong_AsLong(io_default_buffer_size_obj);
+    long io_default_buffer_size_value = PyLong_AsLong(state->io_default_buffer_size);
     if (PyErr_Occurred()) FINISH_WITH(-1);
-    if (state->io_default_buffer_size <= 0) {
+    if (io_default_buffer_size_value <= 0) {
         PyErr_Format(PyExc_ValueError,
                      "io.DEFAULT_BUFFER_SIZE is %ld, expected a positive integer",
                      state->io_default_buffer_size);
@@ -906,7 +907,6 @@ static int module_exec(PyObject* module) {
 ret:
     Py_XDECREF(csv_module);
     Py_XDECREF(io_module);
-    Py_XDECREF(io_default_buffer_size_obj);
     return result;
 }
 
