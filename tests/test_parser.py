@@ -257,3 +257,96 @@ async def test_parsing_field_size_limit(parser: Type[Parser]):
 
     with pytest.raises(csv.Error, match=r"field larger than field limit \(64\)"):
         [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_unterminated_quote(parser: Type[Parser]):
+    data = '"abc\r\n'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), strict=True)
+
+    with pytest.raises(csv.Error, match=r"unexpected end of data"):
+        list(csv_parser)
+
+    with pytest.raises(csv.Error, match=r"unexpected end of data"):
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_unterminated_quote_non_strict(parser: Type[Parser]):
+    data = '"abc\r\n'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), strict=False)
+    csv_result = list(csv_parser)
+
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_result = [line async for line in custom_parser]
+
+    expected_result = [["abc\r\n"]]
+
+    assert csv_result == expected_result
+    assert custom_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_eof_in_escape(parser: Type[Parser]):
+    data = 'a$'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
+
+    with pytest.raises(csv.Error, match=r"unexpected end of data"):
+        list(csv_parser)
+
+    with pytest.raises(csv.Error, match=r"unexpected end of data"):
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_eof_in_escape_non_strict(parser: Type[Parser]):
+    data = 'a$'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
+    csv_result = list(csv_parser)
+
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_result = [line async for line in custom_parser]
+
+    expected_result = [["a\n"]]
+
+    assert csv_result == expected_result
+    assert custom_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_eof_in_quoted_escape(parser: Type[Parser]):
+    data = '"a$'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
+
+    with pytest.raises(csv.Error, match=r"unexpected end of data"):
+        list(csv_parser)
+
+    with pytest.raises(csv.Error, match=r"unexpected end of data"):
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_eof_in_quoted_escape_non_strict(parser: Type[Parser]):
+    data = '"a$'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
+    csv_result = list(csv_parser)
+
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_result = [line async for line in custom_parser]
+
+    expected_result = [["a\n"]]
+
+    assert csv_result == expected_result
+    assert custom_result == expected_result
