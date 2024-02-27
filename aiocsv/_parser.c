@@ -194,12 +194,8 @@ typedef struct {
     /// Generator[Any, None, str] if waiting for a read, NULL otherwise.
     PyObject* current_read;
 
-    /// Data returned by the latest read. If not null, must be of at least
-    /// `module->io_default_buffer_size` bytes.
-    Py_UCS4* buffer;
-
-    /// Number of valid characters in buffer
-    Py_ssize_t buffer_len;
+    /// Data returned by the latest read, if not NULL must be in the canonical form.
+    PyObject* buffer_str;
 
     /// Offset into buffer to the first valid character
     Py_ssize_t buffer_idx;
@@ -322,10 +318,6 @@ static void Parser_dealloc(Parser* self) {
     PyTypeObject* tp = Py_TYPE(self);
     PyObject_GC_UnTrack(self);
     tp->tp_clear((PyObject*)self);
-    if (self->buffer) {
-        PyMem_Free(self->buffer);
-        self->buffer = NULL;
-    }
     if (self->field_so_far) {
         PyMem_Free(self->field_so_far);
         self->field_so_far = NULL;
@@ -338,6 +330,7 @@ static int Parser_traverse(Parser* self, visitproc visit, void* arg) {
     Py_VISIT(self->module);
     Py_VISIT(self->reader);
     Py_VISIT(self->current_read);
+    Py_VISIT(self->buffer_str);
     Py_VISIT(self->record_so_far);
 #if PY_VERSION_HEX >= 0x03090000
     Py_VISIT(Py_TYPE(self));
@@ -391,8 +384,7 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
 
     self->current_read = NULL;
     self->record_so_far = NULL;
-    self->buffer = NULL;
-    self->buffer_len = 0;
+    self->buffer_str = NULL;
     self->buffer_idx = 0;
     self->field_so_far = NULL;
     self->field_so_far_capacity = 0;
@@ -408,6 +400,10 @@ static PyObject* Parser_new(PyObject* module, PyObject* args, PyObject* kwargs) 
 }
 
 // *** Parsing ***
+
+static inline bool Parser_has_char(Parser const* self) {
+    return self->buffer_str && self->buffer_idx < PyUnicode_GET_LENGTH(self->buffer_str);
+}
 
 static int Parser_add_char(Parser* self, Py_UCS4 c) {
     if (self->field_so_far_len == self->field_size_limit) {
@@ -492,8 +488,9 @@ static inline PyObject* Parser_extract_record(Parser* self) {
 }
 
 static Py_UCS4 Parser_get_char_and_increment_line_num(Parser* self) {
-    assert(self->buffer_idx < self->buffer_len);
-    Py_UCS4 c = self->buffer[self->buffer_idx];
+    assert(self->buffer_str);
+    assert(self->buffer_idx < PyUnicode_GET_LENGTH(self->buffer_str));
+    Py_UCS4 c = PyUnicode_READ_CHAR(self->buffer_str, self->buffer_idx);
 
     if (c == '\r') {
         ++self->line_num;
@@ -653,7 +650,7 @@ static Decision Parser_process_char(Parser* self, Py_UCS4 c) {
 
 static PyObject* Parser_try_parse(Parser* self) {
     Decision decision = DECISION_CONTINUE;
-    while (decision == DECISION_CONTINUE && self->buffer_idx < self->buffer_len) {
+    while (decision == DECISION_CONTINUE && Parser_has_char(self)) {
         Py_UCS4 c = Parser_get_char_and_increment_line_num(self);
         decision = Parser_process_char(self, c);
 
@@ -713,53 +710,47 @@ ret:
     return result;
 }
 
-static int Parser_copy_to_buffer(Parser* self, PyObject* unicode) {
+static int Parser_finalize_read(Parser* self, PyObject* unicode) {
     int result = 1;
 
+    // Clear any existing str
+    self->buffer_idx = 0;
+    if (self->buffer_str) {
+        Py_DECREF(self->buffer_str);
+        self->buffer_str = NULL;
+    }
+
+    // Ensure the result is a valid unicode object in canonical form
     if (!PyUnicode_Check(unicode)) {
         PyErr_Format(PyExc_TypeError, "reader.read() returned %R, expected str", Py_TYPE(unicode));
         FINISH_WITH(0);
     }
-
-    Py_ssize_t cap = module_get_state(self->module)->io_default_buffer_size;
-    Py_ssize_t len = PyUnicode_GetLength(unicode);
-    if (len < 0) {
-        FINISH_WITH(0);
-    } else if (len == 0) {
-        self->buffer_len = 0;
-        self->buffer_idx = 0;
-        self->eof = true;
-    } else if (len <= cap) {
-        // Allocate the buffer if it was not allocated beforehand
-        if (!self->buffer) {
-            PyMem_Resize(self->buffer, Py_UCS4, cap);
-            if (!self->buffer) {
-                PyErr_NoMemory();
-                FINISH_WITH(0);
-            }
-        }
-
-        if (!PyUnicode_AsUCS4(unicode, self->buffer, cap, false)) FINISH_WITH(0);
-        self->buffer_len = len;
-        self->buffer_idx = 0;
-    } else {
-        PyErr_Format(PyExc_ValueError,
-                     "reader has read %zi bytes, which is more than the requested %zi bytes", len,
-                     cap);
+    if (PyUnicode_READY(unicode)) {
         FINISH_WITH(0);
     }
 
+    Py_ssize_t len = PyUnicode_GET_LENGTH(unicode);
+    assert(len >= 0);
+    if (len == 0) {
+        // No more data - hit EOF
+        self->eof = true;
+    } else {
+        // More data - move it to buffer_str
+        self->buffer_str = unicode;
+        unicode = NULL;
+    }
+
 ret:
-    Py_DECREF(unicode);
+    Py_XDECREF(unicode);
     return result;
 }
 
 static PyObject* Parser_next(Parser* self) {
     // Loop until a record has been successfully parsed or EOF has been hit
     PyObject* record = NULL;
-    while (!record && (self->buffer_len > 0 || !self->eof)) {
+    while (!record && (self->buffer_str || !self->eof)) {
         // No pending read and no data available - initiate a read
-        if (self->buffer_idx == self->buffer_len && self->current_read == NULL) {
+        if (!Parser_has_char(self) && self->current_read == NULL) {
             if (!Parser_initiate_read(self)) return NULL;
         }
 
@@ -778,7 +769,7 @@ static PyObject* Parser_next(Parser* self) {
             Py_DECREF(self->current_read);
             self->current_read = NULL;
 
-            if (!Parser_copy_to_buffer(self, read_str)) return NULL;
+            if (!Parser_finalize_read(self, read_str)) return NULL;
         }
 
         // Advance parsing
