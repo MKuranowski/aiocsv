@@ -796,6 +796,7 @@ static PyObject* Parser_next(Parser* self) {
     // Generate a row or stop iteration altogether
     if (record) {
         PyErr_SetObject(PyExc_StopIteration, record);
+        Py_DECREF(record);
     } else {
         PyErr_SetNone(PyExc_StopAsyncIteration);
     }
