@@ -217,7 +217,7 @@ class Parser:
     def process_char_in_quote_in_quoted(self, c: str) -> Decision:
         if c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
             # XXX: Is this check for quoting necessary?
-            self.add_char(c)  # type: ignore | wtf
+            self.add_char(c)
             self.state = ParserState.IN_QUOTED_FIELD
         elif c == self.dialect.delimiter:
             self.save_field()
