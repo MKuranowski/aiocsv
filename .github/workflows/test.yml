@@ -19,3 +19,22 @@ jobs:
       run: pip install -e .
     - name: Run tests
       run: pytest
+  lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.8"
+    - name: Install dependencies
+      run: pip install -Ur requirements.dev.txt
+    - name: Check code formatting
+      run: black --check .
+    - name: Check imports order
+      run: isort --check .
+    - name: Install the library
+      run: pip install -e .
+    - name: Run typechecking
+      run: pyright

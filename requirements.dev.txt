@@ -3,3 +3,6 @@ pytest
 pytest-asyncio
 setuptools
 wheel
+isort
+black
+pyright

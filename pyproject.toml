@@ -30,3 +30,13 @@ aiocsv = ["py.typed"]
 
 [tool.setuptools.dynamic]
 version = {attr = "aiocsv.__version__"}
+
+[tool.black]
+line-length = 99
+
+[tool.isort]
+profile = "black"
+line_length = 99
+
+[tool.pyright]
+typeCheckingMode = "strict"
