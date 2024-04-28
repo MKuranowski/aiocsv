@@ -1,9 +1,9 @@
 # © Copyright 2020-2024 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
+import csv
 from enum import IntEnum, auto
 from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence, Union
-import csv
 
 from .protocols import DialectLike, WithAsyncRead
 
@@ -250,7 +250,7 @@ class Parser:
     def save_field(self) -> None:
         field: Union[str, float, None]
         if self.dialect.skipinitialspace:
-            field = "".join(self.field_so_far[self.find_first_non_space(self.field_so_far):])
+            field = "".join(self.field_so_far[self.find_first_non_space(self.field_so_far) :])
         else:
             field = "".join(self.field_so_far)
 

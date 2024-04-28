@@ -14,6 +14,7 @@ class AsyncWriter:
 
     Additional keyword arguments are passed to the underlying csv.writer instance.
     """
+
     def __init__(self, asyncfile: WithAsyncWrite, **csvwriterparams) -> None:
         self._file = asyncfile
         self._buffer = io.StringIO(newline="")
@@ -24,8 +25,7 @@ class AsyncWriter:
         return self._csv_writer.dialect
 
     async def _rewrite_buffer(self) -> None:
-        """Writes the current value of self._buffer to the actual target file.
-        """
+        """Writes the current value of self._buffer to the actual target file."""
         # Write buffer value to the file
         await self._file.write(self._buffer.getvalue())
 
@@ -61,8 +61,10 @@ class AsyncDictWriter:
 
     Additional keyword arguments are passed to the underlying csv.DictWriter instance.
     """
-    def __init__(self, asyncfile: WithAsyncWrite, fieldnames: Sequence[str],
-                 **csvdictwriterparams) -> None:
+
+    def __init__(
+        self, asyncfile: WithAsyncWrite, fieldnames: Sequence[str], **csvdictwriterparams
+    ) -> None:
         self._file = asyncfile
         self._buffer = io.StringIO(newline="")
         self._csv_writer = csv.DictWriter(self._buffer, fieldnames, **csvdictwriterparams)

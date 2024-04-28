@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 import csv
-from warnings import warn
 from typing import Dict, List, Optional, Sequence
+from warnings import warn
+
 from .protocols import WithAsyncRead
 
 try:
@@ -18,6 +19,7 @@ class AsyncReader:
     Additional keyword arguments are passed to the underlying csv.reader instance.
     Iterating over this object returns parsed CSV rows (List[str]).
     """
+
     def __init__(self, asyncfile: WithAsyncRead, **csvreaderparams) -> None:
         self._file = asyncfile
 
@@ -50,9 +52,15 @@ class AsyncDictReader:
     like you would to csv.DictReader.
     Iterating over this object returns parsed CSV rows (Dict[str, str]).
     """
-    def __init__(self, asyncfile: WithAsyncRead, fieldnames: Optional[Sequence[str]] = None,
-                 restkey: Optional[str] = None, restval: Optional[str] = None,
-                 **csvreaderparams) -> None:
+
+    def __init__(
+        self,
+        asyncfile: WithAsyncRead,
+        fieldnames: Optional[Sequence[str]] = None,
+        restkey: Optional[str] = None,
+        restval: Optional[str] = None,
+        **csvreaderparams,
+    ) -> None:
 
         self.fieldnames: Optional[List[str]] = list(fieldnames) if fieldnames else None
         self.restkey: Optional[str] = restkey
