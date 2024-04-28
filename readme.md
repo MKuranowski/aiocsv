@@ -81,12 +81,25 @@ asyncio.run(main())
     The field size limit is cached on Reader instantiation to avoid expensive function calls
     on each character of the input.
 
+Other, minor, differences include:
+- `AsyncReader.line_num`, `AsyncDictReader.line_num` and `AsyncDictReader.dialect` are not settable,
+- `AsyncDictReader.reader` is of `AsyncReader` type,
+- `AsyncDictWriter.writer` is of `AsyncWriter` type,
+- `AsyncDictWriter` provides an extra, read-only `dialect` property.
+
 
 ## Reference
 
 
 ### aiocsv.AsyncReader
-`AsyncReader(asyncfile: aiocsv.protocols.WithAsyncRead, **csvreaderparams)`
+
+```
+AsyncReader(
+    asyncfile: aiocsv.protocols.WithAsyncRead,
+    dialect: str | csv.Dialect | Type[csv.Dialect] = "excel",
+    **csv_dialect_kwargs: Unpack[aiocsv.protocols.CsvDialectKwargs],
+)
+```
 
 An object that iterates over records in the given asynchronous CSV file.
 Additional keyword arguments are understood as dialect parameters.
@@ -104,13 +117,15 @@ Iterating over this object returns parsed CSV rows (`List[str]`).
 
 
 ### aiocsv.AsyncDictReader
+
 ```
 AsyncDictReader(
     asyncfile: aiocsv.protocols.WithAsyncRead,
     fieldnames: Optional[Sequence[str]] = None,
     restkey: Optional[str] = None,
     restval: Optional[str] = None,
-    **csvreaderparams,
+    dialect: str | csv.Dialect | Type[csv.Dialect] = "excel",
+    **csv_dialect_kwargs: Unpack[aiocsv.protocols.CsvDialectKwargs],
 )
 ```
 
@@ -139,9 +154,9 @@ Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
     await areader.get_fieldnames()  # ["cells", "from", "the", "header"]
     ```
 - `restkey`: If a row has more cells then the header, all remaining cells are stored under
-  this key in the returned dictionary. Defaults to `None`.
+    this key in the returned dictionary. Defaults to `None`.
 - `restval`: If a row has less cells then the header, then missing keys will use this
-  value. Defaults to `None`.
+    value. Defaults to `None`.
 - `reader`: Underlying `aiofiles.AsyncReader` instance
 
 *Read-only properties*:
@@ -151,7 +166,14 @@ Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
 
 
 ### aiocsv.AsyncWriter
-`AsyncWriter(asyncfile: aiocsv.protocols.WithAsyncWrite, **csvwriterparams)`
+
+```
+AsyncWriter(
+    asyncfile: aiocsv.protocols.WithAsyncWrite,
+    dialect: str | csv.Dialect | Type[csv.Dialect] = "excel",
+    **csv_dialect_kwargs: Unpack[aiocsv.protocols.CsvDialectKwargs],
+)
+```
 
 An object that writes csv rows to the given asynchronous file.
 In this object "row" is a sequence of values.
@@ -165,11 +187,21 @@ Additional keyword arguments are passed to the underlying csv.writer instance.
     Writes multiple rows to the specified file.
 
 *Readonly properties*:
-- `dialect`: Link to underlying's csv.reader's `dialect` attribute
+- `dialect`: Link to underlying's csv.writer's `dialect` attribute
 
 
 ### aiocsv.AsyncDictWriter
-`AsyncDictWriter(asyncfile: aiocsv.protocols.WithAsyncWrite, fieldnames: Sequence[str], **csvdictwriterparams)`
+
+```
+AsyncDictWriter(
+    asyncfile: aiocsv.protocols.WithAsyncWrite,
+    fieldnames: Sequence[str],
+    restval: Any = "",
+    extrasaction: Literal["raise", "ignore"] = "raise",
+    dialect: str | csv.Dialect | Type[csv.Dialect] = "excel",
+    **csv_dialect_kwargs: Unpack[aiocsv.protocols.CsvDialectKwargs],
+)
+```
 
 An object that writes csv rows to the given asynchronous file.
 In this object "row" is a mapping from fieldnames to values.
@@ -183,6 +215,16 @@ Additional keyword arguments are passed to the underlying csv.DictWriter instanc
 - `async writerows(self, rows: Iterable[Mapping[str, Any]]) -> None`:
     Writes multiple rows to the specified file.
 
+*Properties*:
+- `fieldnames`: Sequence of keys to identify the order of values when writing rows
+    to the underlying file
+- `restval`: Placeholder value used when a key from fieldnames is missing in a row,
+    defaults to `""`
+- `extrasaction`: Action to take when there are keys in a row, which are not present in
+    fieldnames, defaults to `"raise"` which causes ValueError to be raised on extra keys,
+    may be also set to `"ignore"` to ignore any extra keys
+- `writer`: Link to the underlying `AsyncWriter`
+
 *Readonly properties*:
 - `dialect`: Link to underlying's csv.reader's `dialect` attribute
 
@@ -193,3 +235,107 @@ A `typing.Protocol` describing an asynchronous file, which can be read.
 
 ### aiocsv.protocols.WithAsyncWrite
 A `typing.Protocol` describing an asynchronous file, which can be written to.
+
+
+### aiocsv.protocols.CsvDialectArg
+Type of the `dialect` argument, as used in the `csv` module.
+
+
+### aiocsv.protocols.CsvDialectKwargs
+Keyword arguments used by `csv` module to override the dialect settings during reader/writer
+instantiation.
+
+## Development
+
+Contributions are welcome, however please open an issue beforehand. `aiocsv` is meant as
+a replacement for the built-in `csv`, any features not present in the latter will be rejected.
+
+### Building from source
+
+To create a wheel (and a source tarball), run `python -m build`.
+
+For local development, use a [virtual environment](https://docs.python.org/3/library/venv.html).
+`pip install --editable .` will build the C extension and make it available for the current
+venv. This is required for running the tests. However, [due to the mess of Python packaging](https://docs.python.org/3/library/venv.html)
+this will force an optimized build without debugging symbols. If you need to debug the C part
+of aiocsv and build the library with e.g. debugging symbols, the only sane way is to
+run `python setup.py build --debug` and manually copy the shared object/DLL from `build/lib*/aiocsv`
+to `aiocsv`.
+
+### Tests
+
+This project uses [pytest](https://docs.pytest.org/en/latest/contents.html) with
+[pytest-asyncio](https://pypi.org/project/pytest-asyncio/) for testing. Run `pytest`
+after installing the library in the manner explained above.
+
+### Linting & other tools
+
+This library uses [black](https://pypi.org/project/black/) and [isort](https://pypi.org/project/isort/)
+for formatting and [pyright](https://github.com/microsoft/pyright) in strict mode for type checking.
+
+For the C part of library, please use [clang-format](https://clang.llvm.org/docs/ClangFormat.html)
+for formatting and [clang-tidy](https://clang.llvm.org/extra/clang-tidy/) linting,
+however this are not yet integrated in the CI.
+
+### Installing required tools
+
+`pip install -r requirements.dev.txt` will pull all of the development tools mentioned above,
+however this might not be necessary depending on your setup. For example, if you use VS Code
+with the Python extension, pyright is already bundled and doesn't need to be installed again. 
+
+### Recommended VS Code settings
+
+Use [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python),
+[Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance)
+(should be installed automatically alongside Python extension),
+[black](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter) and
+[isort](https://marketplace.visualstudio.com/items?itemName=ms-python.isort) Python extensions.
+
+You will need to install all dev dependencies from `requirements.dev.txt`, except for `pyright`.
+Recommended `.vscode/settings.json`:
+
+```json
+{
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+        }
+    },
+    "[c]": {
+        "editor.formatOnSave": true
+    }
+}
+```
+
+For the C part of the library, [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) is sufficient.
+Ensure that your system has Python headers installed. Usually a separate package like python3-dev
+needs to be installed, consult with your system repositories on that. `.vscode/c_cpp_properties.json`
+needs to manually include Python headers under `includePath`. On my particular system this
+config file looks like this:
+
+```json
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include/python3.11"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}
+```
