@@ -1,7 +1,8 @@
+import os
 from tempfile import NamedTemporaryFile
+
 import aiofiles
 import pytest
-import os
 
 from aiocsv import AsyncReader, AsyncWriter
 

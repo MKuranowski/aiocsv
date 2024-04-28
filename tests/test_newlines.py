@@ -9,7 +9,7 @@ HEADER = ["field1", "field2", "field3"]
 READ_VALUES = [
     ["hello", 'is it "me"', "you're\nlooking for"],
     ["this is going to be", "another\nbroken row", "this time with escapechar"],
-    ["and now it's both quoted\nand", "with", "escape char"]
+    ["and now it's both quoted\nand", "with", "escape char"],
 ]
 
 

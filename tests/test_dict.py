@@ -1,22 +1,26 @@
-from tempfile import NamedTemporaryFile
-import aiofiles
-import pytest
 import csv
 import os
+from tempfile import NamedTemporaryFile
+
+import aiofiles
+import pytest
 
 from aiocsv import AsyncDictReader, AsyncDictWriter
 
 FILENAME = "tests/metro_systems.tsv"
 PARAMS = {"delimiter": "\t", "quotechar": "'", "quoting": csv.QUOTE_ALL}
 HEADER = ["City", "Stations", "System Length"]
-VALUES = [dict(zip(HEADER, i)) for i in [
-    ["New York", "424", "380"],
-    ["Shanghai", "345", "676"],
-    ["Seoul", "331", "353"],
-    ["Beijing", "326", "690"],
-    ["Paris", "302", "214"],
-    ["London", "270", "402"],
-]]
+VALUES = [
+    dict(zip(HEADER, i))
+    for i in [
+        ["New York", "424", "380"],
+        ["Shanghai", "345", "676"],
+        ["Seoul", "331", "353"],
+        ["Beijing", "326", "690"],
+        ["Paris", "302", "214"],
+        ["London", "270", "402"],
+    ]
+]
 
 
 @pytest.mark.asyncio

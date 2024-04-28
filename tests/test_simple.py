@@ -1,18 +1,14 @@
+import os
 from tempfile import NamedTemporaryFile
+
 import aiofiles
 import pytest
-import os
 
 from aiocsv import AsyncReader, AsyncWriter
 
 FILENAME = "tests/math_constants.csv"
 HEADER = ["name", "value"]
-VALUES = [
-    ["pi", "3.1416"],
-    ["sqrt2", "1.4142"],
-    ["phi", "1.618"],
-    ["e", "2.7183"]
-]
+VALUES = [["pi", "3.1416"], ["sqrt2", "1.4142"], ["phi", "1.618"], ["e", "2.7183"]]
 
 
 @pytest.mark.asyncio

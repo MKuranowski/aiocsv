@@ -1,11 +1,12 @@
-from typing import AsyncIterator, Callable, List, Protocol, Type
-import pytest
 import csv
 import io
+from typing import AsyncIterator, Callable, List, Protocol, Type
 
-from aiocsv.parser import Parser as PyParser
+import pytest
+
 from aiocsv._parser import Parser as CParser
-from aiocsv.protocols import WithAsyncRead, DialectLike
+from aiocsv.parser import Parser as PyParser
+from aiocsv.protocols import DialectLike, WithAsyncRead
 
 
 class Parser(Protocol):
@@ -37,9 +38,7 @@ async def test_parsing_simple(parser: Type[Parser]):
     data = 'abc,"def",ghi\r\n' '"j""k""l",mno,pqr\r\n' 'stu,vwx,"yz"\r\n'
 
     csv_result = list(csv.reader(io.StringIO(data, newline="")))
-    custom_result = [
-        r async for r in parser(AsyncStringIO(data), csv.get_dialect("excel"))
-    ]
+    custom_result = [r async for r in parser(AsyncStringIO(data), csv.get_dialect("excel"))]
 
     assert csv_result == custom_result
     assert custom_result == [
@@ -66,9 +65,7 @@ async def test_parsing_escapes(parser: Type[Parser]):
 async def test_parsing_empty(parser: Type[Parser]):
     data = "\r\n  a,,\r\n,\r\n  "
 
-    csv_parser = csv.reader(
-        io.StringIO(data, newline=""), skipinitialspace=True, strict=True
-    )
+    csv_parser = csv.reader(io.StringIO(data, newline=""), skipinitialspace=True, strict=True)
     csv_result = list(csv_parser)
     custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
 
@@ -112,9 +109,7 @@ async def test_parsing_nonnumeric_invalid(parser: Type[Parser]):
 async def test_parsing_none_quoting(parser: Type[Parser]):
     data = '1" hello,"2\na","3.14"'
 
-    csv_parser = csv.reader(
-        io.StringIO(data, newline=""), quoting=csv.QUOTE_NONE, strict=True
-    )
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NONE, strict=True)
     csv_result = list(csv_parser)
     custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
 
@@ -293,7 +288,7 @@ async def test_parsing_unterminated_quote_non_strict(parser: Type[Parser]):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
 async def test_parsing_eof_in_escape(parser: Type[Parser]):
-    data = 'a$'
+    data = "a$"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
 
@@ -307,7 +302,7 @@ async def test_parsing_eof_in_escape(parser: Type[Parser]):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
 async def test_parsing_eof_in_escape_non_strict(parser: Type[Parser]):
-    data = 'a$'
+    data = "a$"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
     csv_result = list(csv_parser)
