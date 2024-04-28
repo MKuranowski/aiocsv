@@ -6,9 +6,10 @@ import aiofiles
 import pytest
 
 from aiocsv import AsyncDictReader, AsyncDictWriter
+from aiocsv.protocols import CsvDialectKwargs
 
 FILENAME = "tests/metro_systems.tsv"
-PARAMS = {"delimiter": "\t", "quotechar": "'", "quoting": csv.QUOTE_ALL}
+DIALECT_PARAMS: CsvDialectKwargs = {"delimiter": "\t", "quotechar": "'", "quoting": csv.QUOTE_ALL}
 HEADER = ["City", "Stations", "System Length"]
 VALUES = [
     dict(zip(HEADER, i))
@@ -26,14 +27,14 @@ VALUES = [
 @pytest.mark.asyncio
 async def test_dict_read():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
-        read_rows = [i async for i in AsyncDictReader(afp, **PARAMS)]
+        read_rows = [i async for i in AsyncDictReader(afp, **DIALECT_PARAMS)]
         assert read_rows == VALUES
 
 
 @pytest.mark.asyncio
 async def test_dict_read_line_nums():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
-        r = AsyncDictReader(afp, **PARAMS)
+        r = AsyncDictReader(afp, **DIALECT_PARAMS)
         read_rows = [(row, r.line_num) async for row in r]
         assert read_rows == [(row, i) for i, row in enumerate(VALUES, start=2)]
 
@@ -41,7 +42,7 @@ async def test_dict_read_line_nums():
 @pytest.mark.asyncio
 async def test_dict_read_get_fieldnames():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
-        reader = AsyncDictReader(afp, **PARAMS)
+        reader = AsyncDictReader(afp, **DIALECT_PARAMS)
 
         assert reader.fieldnames is None
         assert await reader.get_fieldnames() == ["City", "Stations", "System Length"]
@@ -57,7 +58,7 @@ async def test_dict_write():
     try:
         # Write rows
         async with aiofiles.open(target_name, mode="w", encoding="ascii", newline="") as afp:
-            writer = AsyncDictWriter(afp, HEADER, **PARAMS)
+            writer = AsyncDictWriter(afp, HEADER, **DIALECT_PARAMS)
             await writer.writeheader()
             await writer.writerow(VALUES[0])
             await writer.writerows(VALUES[1:])

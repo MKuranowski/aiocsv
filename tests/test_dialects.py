@@ -7,7 +7,7 @@ import pytest
 from aiocsv import AsyncReader, AsyncWriter
 
 FILENAME = "tests/eu_cities_unix.csv"
-PARAMS = {"dialect": "unix"}
+DIALECT = "unix"
 VALUES = [
     ["Berlin", "Germany"],
     ["Madrid", "Spain"],
@@ -20,7 +20,7 @@ VALUES = [
 @pytest.mark.asyncio
 async def test_dialect_read():
     async with aiofiles.open(FILENAME, mode="r", encoding="ascii", newline="") as afp:
-        read_rows = [i async for i in AsyncReader(afp, **PARAMS)]
+        read_rows = [i async for i in AsyncReader(afp, dialect=DIALECT)]
         assert read_rows == VALUES
 
 
@@ -33,7 +33,7 @@ async def test_dialect_write():
     try:
         # Write rows
         async with aiofiles.open(target_name, mode="w", encoding="ascii", newline="") as afp:
-            writer = AsyncWriter(afp, **PARAMS)
+            writer = AsyncWriter(afp, dialect=DIALECT)
             await writer.writerow(VALUES[0])
             await writer.writerows(VALUES[1:])
 

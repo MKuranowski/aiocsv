@@ -2,8 +2,9 @@ import aiofiles
 import pytest
 
 from aiocsv import AsyncDictReader, AsyncReader
+from aiocsv.protocols import CsvDialectKwargs
 
-DIALECT_PARAMS = {"escapechar": "$", "lineterminator": "\n"}
+DIALECT_PARAMS: CsvDialectKwargs = {"escapechar": "$", "lineterminator": "\n"}
 FILENAME = "tests/newlines.csv"
 HEADER = ["field1", "field2", "field3"]
 READ_VALUES = [
