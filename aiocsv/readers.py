@@ -1,11 +1,15 @@
 # © Copyright 2020-2024 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
+# cSpell: words asyncfile restkey restval
+
 import csv
 from typing import Dict, List, Optional, Sequence
 from warnings import warn
 
-from .protocols import WithAsyncRead
+from typing_extensions import Unpack
+
+from .protocols import CsvDialectArg, CsvDialectKwargs, WithAsyncRead
 
 try:
     from ._parser import Parser
@@ -20,13 +24,18 @@ class AsyncReader:
     Iterating over this object returns parsed CSV rows (List[str]).
     """
 
-    def __init__(self, asyncfile: WithAsyncRead, **csvreaderparams) -> None:
+    def __init__(
+        self,
+        asyncfile: WithAsyncRead,
+        dialect: CsvDialectArg = "excel",
+        **csv_dialect_kwargs: Unpack[CsvDialectKwargs],
+    ) -> None:
         self._file = asyncfile
 
         # csv.Dialect isn't a class, instead it's a weird proxy
         # (at least in CPython) to _csv.Dialect. Instead of figuring how
         # this shit works, just let `csv` figure the dialects out.
-        self._dialect = csv.reader("", **csvreaderparams).dialect
+        self._dialect = csv.reader("", dialect=dialect, **csv_dialect_kwargs).dialect
 
         self._parser = Parser(self._file, self._dialect)
 
@@ -59,13 +68,14 @@ class AsyncDictReader:
         fieldnames: Optional[Sequence[str]] = None,
         restkey: Optional[str] = None,
         restval: Optional[str] = None,
-        **csvreaderparams,
+        dialect: CsvDialectArg = "excel",
+        **csv_dialect_kwargs: Unpack[CsvDialectKwargs],
     ) -> None:
 
         self.fieldnames: Optional[List[str]] = list(fieldnames) if fieldnames else None
         self.restkey: Optional[str] = restkey
         self.restval: Optional[str] = restval
-        self.reader = AsyncReader(asyncfile, **csvreaderparams)
+        self.reader = AsyncReader(asyncfile, dialect=dialect, **csv_dialect_kwargs)
 
     @property
     def dialect(self) -> csv.Dialect:

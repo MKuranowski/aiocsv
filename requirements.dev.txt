@@ -1,3 +1,4 @@
+-r requirements.txt
 aiofiles
 pytest
 pytest-asyncio

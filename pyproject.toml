@@ -17,6 +17,9 @@ classifiers = [
     "Framework :: AsyncIO",
     "Programming Language :: Python :: 3 :: Only",
 ]
+dependencies = [
+    "typing_extensions"
+]
 
 [project.urls]
 Homepage = "https://github.com/MKuranowski/aiocsv"
