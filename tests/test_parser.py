@@ -38,7 +38,9 @@ async def test_parsing_simple(parser: Type[Parser]):
     data = 'abc,"def",ghi\r\n' '"j""k""l",mno,pqr\r\n' 'stu,vwx,"yz"\r\n'
 
     csv_result = list(csv.reader(io.StringIO(data, newline="")))
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv.get_dialect("excel"))]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv.get_dialect("excel"))  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [
@@ -54,7 +56,9 @@ async def test_parsing_escapes(parser: Type[Parser]):
     data = 'ab$"c,de$\nf\r\n' '"$"",$$gh$"\r\n' '"i\nj",k$,\r\n'
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [['ab"c', "de\nf"], ['"', '$gh"'], ["i\nj", "k,"]]
@@ -67,7 +71,9 @@ async def test_parsing_empty(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), skipinitialspace=True, strict=True)
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [[], ["a", "", ""], ["", ""], [""]]
@@ -82,7 +88,9 @@ async def test_parsing_nonnumeric(parser: Type[Parser]):
         io.StringIO(data, newline=""), quoting=csv.QUOTE_NONNUMERIC, strict=True
     )
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [[1.0, 2.0], ["a", "", 3.14]]
@@ -101,7 +109,7 @@ async def test_parsing_nonnumeric_invalid(parser: Type[Parser]):
         list(csv_parser)
 
     with pytest.raises(ValueError):
-        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
 
 
 @pytest.mark.asyncio
@@ -111,7 +119,9 @@ async def test_parsing_none_quoting(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NONE, strict=True)
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [['1" hello', '"2'], ['a"', '"3.14"']]
@@ -124,7 +134,9 @@ async def test_parsing_weird_quotes(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [['a"b', '"cd"'], ['efg"', ""], ['""', 'e$f"']]
@@ -141,7 +153,7 @@ async def test_parsing_strict_quoting(parser: Type[Parser]):
         list(csv_parser)
 
     with pytest.raises(csv.Error, match="',' expected after '\"'"):
-        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
 
 
 @pytest.mark.asyncio
@@ -156,7 +168,9 @@ async def test_parsing_weird_quotes_nonnumeric(parser: Type[Parser]):
         strict=False,
     )
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
 
     assert csv_result == custom_result
     assert custom_result == [[3.0, ""], ["1.5", "15"], ["2", "-4.5"], [-5.2, -11.0]]
@@ -169,7 +183,9 @@ async def test_parsing_escape_after_quote_in_quoted(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
     expected_result = [["fo$o"]]
 
     assert csv_result == expected_result
@@ -183,7 +199,9 @@ async def test_parsing_escaped_crlf(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
     expected_result = [["foo\r"], ["bar"]]
 
     assert csv_result == expected_result
@@ -197,7 +215,9 @@ async def test_parsing_escaped_crlf_in_quoted(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
     expected_result = [["foo\r\n", "bar"]]
 
     assert csv_result == expected_result
@@ -211,7 +231,9 @@ async def test_parsing_consecutive_newlines(parser: Type[Parser]):
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
     csv_result = list(csv_parser)
-    custom_result = [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
     expected_result = [["foo"], [], ["bar"], [], ["baz"], [], ["spam"], [], ["eggs"]]
 
     assert csv_result == expected_result
@@ -226,7 +248,7 @@ async def test_parsing_line_num(parser: Type[Parser]):
     csv_parser = csv.reader(io.StringIO(data, newline=""))
     csv_result = [(csv_parser.line_num, line) for line in csv_parser]
 
-    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
     custom_result = [(custom_parser.line_num, line) async for line in custom_parser]
 
     expected_result = [
@@ -251,7 +273,7 @@ async def test_parsing_field_size_limit(parser: Type[Parser]):
         list(csv_parser)
 
     with pytest.raises(csv.Error, match=r"field larger than field limit \(64\)"):
-        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
 
 
 @pytest.mark.asyncio
@@ -265,7 +287,7 @@ async def test_parsing_unterminated_quote(parser: Type[Parser]):
         list(csv_parser)
 
     with pytest.raises(csv.Error, match=r"unexpected end of data"):
-        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
 
 
 @pytest.mark.asyncio
@@ -276,7 +298,7 @@ async def test_parsing_unterminated_quote_non_strict(parser: Type[Parser]):
     csv_parser = csv.reader(io.StringIO(data, newline=""), strict=False)
     csv_result = list(csv_parser)
 
-    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
     custom_result = [line async for line in custom_parser]
 
     expected_result = [["abc\r\n"]]
@@ -296,7 +318,7 @@ async def test_parsing_eof_in_escape(parser: Type[Parser]):
         list(csv_parser)
 
     with pytest.raises(csv.Error, match=r"unexpected end of data"):
-        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
 
 
 @pytest.mark.asyncio
@@ -307,7 +329,7 @@ async def test_parsing_eof_in_escape_non_strict(parser: Type[Parser]):
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
     csv_result = list(csv_parser)
 
-    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
     custom_result = [line async for line in custom_parser]
 
     expected_result = [["a\n"]]
@@ -327,7 +349,7 @@ async def test_parsing_eof_in_quoted_escape(parser: Type[Parser]):
         list(csv_parser)
 
     with pytest.raises(csv.Error, match=r"unexpected end of data"):
-        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
 
 
 @pytest.mark.asyncio
@@ -338,7 +360,7 @@ async def test_parsing_eof_in_quoted_escape_non_strict(parser: Type[Parser]):
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
     csv_result = list(csv_parser)
 
-    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)
+    custom_parser = parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
     custom_result = [line async for line in custom_parser]
 
     expected_result = [["a\n"]]
