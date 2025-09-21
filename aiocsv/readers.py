@@ -1,4 +1,4 @@
-# © Copyright 2020-2024 Mikołaj Kuranowski
+# © Copyright 2020-2025 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
 # cSpell: words asyncfile restkey restval
@@ -9,7 +9,7 @@ from warnings import warn
 
 from typing_extensions import Unpack
 
-from .protocols import CsvDialectArg, CsvDialectKwargs, WithAsyncRead
+from .protocols import CsvDialectArg, CsvDialectKwargs, DialectLike, WithAsyncRead
 
 try:
     from ._parser import Parser
@@ -40,7 +40,7 @@ class AsyncReader:
         self._parser = Parser(self._file, self._dialect)
 
     @property
-    def dialect(self) -> csv.Dialect:
+    def dialect(self) -> DialectLike:
         return self._dialect
 
     @property
@@ -78,7 +78,7 @@ class AsyncDictReader:
         self.reader = AsyncReader(asyncfile, dialect=dialect, **csv_dialect_kwargs)
 
     @property
-    def dialect(self) -> csv.Dialect:
+    def dialect(self) -> DialectLike:
         return self.reader.dialect
 
     @property

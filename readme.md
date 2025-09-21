@@ -111,8 +111,8 @@ Iterating over this object returns parsed CSV rows (`List[str]`).
 - `async __anext__(self) -> List[str]`
 
 *Read-only properties*:
-- `dialect`: The csv.Dialect used when parsing
-- `line_num`: The number of lines read from the source file. This coincides with a 1-based index
+- `dialect` (`aiocsv.protocols.DialectLike`): The dialect used when parsing
+- `line_num` (`int`): The number of lines read from the source file. This coincides with a 1-based index
     of the line number of the last line of the recently parsed record.
 
 
@@ -141,7 +141,7 @@ Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
 
 
 *Properties*:
-- `fieldnames`: field names used when converting rows to dictionaries  
+- `fieldnames` (`List[str] | None`): field names used when converting rows to dictionaries  
     **⚠️** Unlike csv.DictReader, this property can't read the fieldnames if they are missing -
     it's not possible to `await` on the header row in a property getter.
     **Use `await reader.get_fieldnames()`**.
@@ -153,15 +153,15 @@ Iterating over this object returns parsed CSV rows (`Dict[str, str]`).
     areader.fieldnames   # ⚠️ None
     await areader.get_fieldnames()  # ["cells", "from", "the", "header"]
     ```
-- `restkey`: If a row has more cells then the header, all remaining cells are stored under
+- `restkey` (`str | None`): If a row has more cells then the header, all remaining cells are stored under
     this key in the returned dictionary. Defaults to `None`.
-- `restval`: If a row has less cells then the header, then missing keys will use this
+- `restval` (`str | None`): If a row has less cells then the header, then missing keys will use this
     value. Defaults to `None`.
 - `reader`: Underlying `aiofiles.AsyncReader` instance
 
 *Read-only properties*:
-- `dialect`: Link to `self.reader.dialect` - the current csv.Dialect
-- `line_num`: The number of lines read from the source file. This coincides with a 1-based index
+- `dialect` (`aiocsv.protocols.DialectLike`): Link to `self.reader.dialect` - the current csv.Dialect
+- `line_num` (`int`): The number of lines read from the source file. This coincides with a 1-based index
     of the line number of the last line of the recently parsed record.
 
 
@@ -187,7 +187,7 @@ Additional keyword arguments are passed to the underlying csv.writer instance.
     Writes multiple rows to the specified file.
 
 *Readonly properties*:
-- `dialect`: Link to underlying's csv.writer's `dialect` attribute
+- `dialect` (`aiocsv.protocols.DialectLike`): Link to underlying's csv.writer's `dialect` attribute
 
 
 ### aiocsv.AsyncDictWriter
@@ -216,17 +216,17 @@ Additional keyword arguments are passed to the underlying csv.DictWriter instanc
     Writes multiple rows to the specified file.
 
 *Properties*:
-- `fieldnames`: Sequence of keys to identify the order of values when writing rows
+- `fieldnames` (`Sequence[str]`): Sequence of keys to identify the order of values when writing rows
     to the underlying file
-- `restval`: Placeholder value used when a key from fieldnames is missing in a row,
+- `restval` (`Any`): Placeholder value used when a key from fieldnames is missing in a row,
     defaults to `""`
-- `extrasaction`: Action to take when there are keys in a row, which are not present in
+- `extrasaction` (`Literal["raise", "ignore"]`): Action to take when there are keys in a row, which are not present in
     fieldnames, defaults to `"raise"` which causes ValueError to be raised on extra keys,
     may be also set to `"ignore"` to ignore any extra keys
 - `writer`: Link to the underlying `AsyncWriter`
 
 *Readonly properties*:
-- `dialect`: Link to underlying's csv.reader's `dialect` attribute
+- `dialect` (`aiocsv.protocols.DialectLike`): Link to underlying's csv.reader's `dialect` attribute
 
 
 ### aiocsv.protocols.WithAsyncRead
@@ -236,6 +236,9 @@ A `typing.Protocol` describing an asynchronous file, which can be read.
 ### aiocsv.protocols.WithAsyncWrite
 A `typing.Protocol` describing an asynchronous file, which can be written to.
 
+### aiocsv.protocols.DialectLike
+Type of an instantiated `dialect` property. Thank CPython for an incredible mess of
+having unrelated and disjoint `csv.Dialect` and `_csv.Dialect` classes.
 
 ### aiocsv.protocols.CsvDialectArg
 Type of the `dialect` argument, as used in the `csv` module.

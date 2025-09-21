@@ -1,12 +1,18 @@
-# © Copyright 2020-2024 Mikołaj Kuranowski
+# © Copyright 2020-2025 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
-from typing import TYPE_CHECKING, Any, Optional, Protocol, Type, TypedDict, Union
+import sys
+from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, Type, TypedDict, Union
 
 from typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     import csv
+
+if sys.version_info < (3, 12):
+    _QuotingType = Literal[0, 1, 2, 3]
+else:
+    _QuotingType = Literal[0, 1, 2, 3, 4, 5]
 
 
 class WithAsyncWrite(Protocol):
@@ -23,7 +29,7 @@ class DialectLike(Protocol):
     escapechar: Optional[str]
     doublequote: bool
     skipinitialspace: bool
-    quoting: int
+    quoting: _QuotingType
     strict: bool
 
 
@@ -37,5 +43,5 @@ class CsvDialectKwargs(TypedDict):
     doublequote: NotRequired[bool]
     skipinitialspace: NotRequired[bool]
     lineterminator: NotRequired[str]
-    quoting: NotRequired[int]
+    quoting: NotRequired[_QuotingType]
     strict: NotRequired[bool]

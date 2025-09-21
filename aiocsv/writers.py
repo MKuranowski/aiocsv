@@ -1,4 +1,4 @@
-# © Copyright 2020-2024 Mikołaj Kuranowski
+# © Copyright 2020-2025 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
 # cSpell: words asyncfile extrasaction fieldnames restval
@@ -9,7 +9,7 @@ from typing import Any, Iterable, Literal, Mapping, Optional, Sequence
 
 from typing_extensions import Unpack
 
-from .protocols import CsvDialectArg, CsvDialectKwargs, WithAsyncWrite
+from .protocols import CsvDialectArg, CsvDialectKwargs, DialectLike, WithAsyncWrite
 
 
 class AsyncWriter:
@@ -30,7 +30,7 @@ class AsyncWriter:
         self._csv_writer = csv.writer(self._buffer, dialect=dialect, **csv_dialect_kwargs)
 
     @property
-    def dialect(self) -> csv.Dialect:
+    def dialect(self) -> DialectLike:
         return self._csv_writer.dialect
 
     async def _rewrite_buffer(self) -> None:
@@ -86,7 +86,7 @@ class AsyncDictWriter:
         self.writer = AsyncWriter(asyncfile, dialect, **csv_dialect_kwargs)
 
     @property
-    def dialect(self) -> csv.Dialect:
+    def dialect(self) -> DialectLike:
         return self.writer.dialect
 
     def _dict_to_iterable(self, row_dict: Mapping[str, Any]) -> Iterable[Any]:
