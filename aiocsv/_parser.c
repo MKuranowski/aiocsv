@@ -88,6 +88,18 @@ static PySendResult PyIter_Send(PyObject* iter, PyObject* arg, PyObject** presul
 
 #endif
 
+#if PY_VERSION_HEX < 0x030D0000
+
+static int PyModule_Add(PyObject* module, const char* name, PyObject* value) {
+    if (PyModule_AddObject(module, name, value) < 0) {
+        Py_XDECREF(value);
+        return -1;
+    }
+    return 0;
+}
+
+#endif
+
 // ***************
 // * DEFINITIONS *
 // ***************
