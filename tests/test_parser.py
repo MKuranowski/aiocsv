@@ -372,3 +372,22 @@ async def test_parsing_eof_in_quoted_escape_non_strict(parser: Type[Parser]):
 
     assert csv_result == expected_result
     assert custom_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_no_newline_at_the_end(parser: Type[Parser]):
+    data = "pi,3.1416\r\nsqrt2,1.4142\r\nphi,1.618\r\ne,2.7183"
+
+    csv_result = list(csv.reader(io.StringIO(data, newline="")))
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv.get_dialect("excel"))  # type: ignore
+    ]
+
+    assert csv_result == custom_result
+    assert custom_result == [
+        ["pi", "3.1416"],
+        ["sqrt2", "1.4142"],
+        ["phi", "1.618"],
+        ["e", "2.7183"],
+    ]
