@@ -163,6 +163,7 @@ class Parser:
         elif c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
             self.state = ParserState.IN_QUOTED_FIELD
         elif c == self.dialect.escapechar:
+            self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
             self.state = ParserState.ESCAPE
         # XXX: skipinitialspace handling is done in save_field()
         elif c == self.dialect.delimiter:

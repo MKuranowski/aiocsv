@@ -1,5 +1,6 @@
 import csv
 import io
+import sys
 from typing import AsyncIterator, Callable, List, Protocol, Type
 
 import pytest
@@ -157,6 +158,7 @@ async def test_parsing_strict_quoting(parser: Type[Parser]):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="CPython bug gh-113785 was fixed in 3.12")
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
 async def test_parsing_weird_quotes_nonnumeric(parser: Type[Parser]):
     data = '3.0,\r\n"1."5,"15"\r\n$2,"-4".5\r\n-5$.2,-11'
@@ -173,7 +175,7 @@ async def test_parsing_weird_quotes_nonnumeric(parser: Type[Parser]):
     ]
 
     assert csv_result == custom_result
-    assert custom_result == [[3.0, ""], ["1.5", "15"], ["2", "-4.5"], [-5.2, -11.0]]
+    assert custom_result == [[3.0, ""], ["1.5", "15"], [2.0, "-4.5"], [-5.2, -11.0]]
 
 
 @pytest.mark.asyncio

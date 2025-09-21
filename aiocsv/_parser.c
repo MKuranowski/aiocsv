@@ -619,6 +619,7 @@ static Decision Parser_process_char_in_start_field(Parser* self, Py_UCS4 c) {
         self->state = STATE_IN_QUOTED_FIELD;
         return DECISION_CONTINUE;
     } else if (c == self->dialect.escapechar) {
+        self->field_was_numeric = self->dialect.quoting == QUOTE_NON_NUMERIC;
         self->state = STATE_ESCAPE;
         return DECISION_CONTINUE;
     } else if (c == self->dialect.delimiter) {
