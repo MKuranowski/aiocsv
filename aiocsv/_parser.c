@@ -357,6 +357,24 @@ static PyObject* Parser_new(PyTypeObject* subtype, PyObject* args, PyObject* kwa
     Parser* self = PyObject_GC_New(Parser, subtype);
     if (!self) return NULL;
 
+    // Zero-initialize all custom Parser fields. In case the initialization fails,
+    // we need to ensure the deallocator doesn't stumble on garbage values.
+    self->reader = NULL;
+    self->current_read = NULL;
+    self->buffer_str = NULL;
+    self->buffer_idx = 0;
+    self->record_so_far = NULL;
+    self->field_so_far = NULL;
+    self->field_so_far_capacity = 0;
+    self->field_so_far_len = 0;
+    self->dialect = (Dialect){0};
+    self->field_size_limit = 0;
+    self->line_num = 0;
+    self->state = STATE_START_RECORD;
+    self->field_was_numeric = false;
+    self->last_char_was_cr = false;
+    self->eof = false;
+
     PyObject* reader;
     PyObject* dialect;
     static char* kw_list[] = {"reader", "dialect", NULL};
@@ -384,19 +402,6 @@ static PyObject* Parser_new(PyTypeObject* subtype, PyObject* args, PyObject* kwa
         Py_DECREF(self);
         return NULL;
     }
-
-    self->current_read = NULL;
-    self->record_so_far = NULL;
-    self->buffer_str = NULL;
-    self->buffer_idx = 0;
-    self->field_so_far = NULL;
-    self->field_so_far_capacity = 0;
-    self->field_so_far_len = 0;
-    self->line_num = 0;
-    self->state = STATE_START_RECORD;
-    self->field_was_numeric = false;
-    self->last_char_was_cr = false;
-    self->eof = false;
 
     PyObject_GC_Track(self);
     return (PyObject*)self;
