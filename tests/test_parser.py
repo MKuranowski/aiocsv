@@ -158,7 +158,10 @@ async def test_parsing_strict_quoting(parser: Type[Parser]):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.version_info < (3, 12, 9), reason="CPython bug gh-113785 was fixed in 3.12.9")
+@pytest.mark.skipif(
+    sys.version_info < (3, 12, 9),
+    reason="CPython bug gh-113785 was fixed in 3.12.9",
+)
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
 async def test_parsing_weird_quotes_nonnumeric(parser: Type[Parser]):
     data = '3.0,\r\n"1."5,"15"\r\n$2,"-4".5\r\n-5$.2,-11'
