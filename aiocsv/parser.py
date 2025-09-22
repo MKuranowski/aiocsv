@@ -1,9 +1,10 @@
-# © Copyright 2020-2024 Mikołaj Kuranowski
+# © Copyright 2020-2025 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
 import csv
+import sys
 from enum import IntEnum, auto
-from typing import Any, AsyncIterator, Awaitable, Generator, List, Optional, Sequence, Union
+from typing import Any, AsyncIterator, Awaitable, Final, Generator, List, Optional, Sequence, Union
 
 from .protocols import DialectLike, WithAsyncRead
 
@@ -39,6 +40,12 @@ QUOTE_MINIMAL = csv.QUOTE_MINIMAL
 QUOTE_ALL = csv.QUOTE_ALL
 QUOTE_NONNUMERIC = csv.QUOTE_NONNUMERIC
 QUOTE_NONE = csv.QUOTE_NONE
+if sys.version_info >= (3, 12):
+    QUOTE_STRINGS = csv.QUOTE_STRINGS
+    QUOTE_NOTNULL = csv.QUOTE_NOTNULL
+else:
+    QUOTE_STRINGS: Final = 4
+    QUOTE_NOTNULL: Final = 5
 
 
 class Parser:
@@ -55,7 +62,7 @@ class Parser:
         self.record_so_far: List[str] = []
         self.field_so_far: List[str] = []
         self.field_limit: int = csv.field_size_limit()
-        self.field_was_numeric: bool = False
+        self.field_was_quoted: bool = False
         self.last_char_was_cr: bool = False
 
     # AsyncIterator[List[str]] interface
@@ -161,16 +168,15 @@ class Parser:
             self.state = ParserState.START_RECORD
             return Decision.DONE
         elif c == self.dialect.quotechar and self.dialect.quoting != QUOTE_NONE:
+            self.field_was_quoted = True
             self.state = ParserState.IN_QUOTED_FIELD
         elif c == self.dialect.escapechar:
-            self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
             self.state = ParserState.ESCAPE
         # XXX: skipinitialspace handling is done in save_field()
         elif c == self.dialect.delimiter:
             self.save_field()
             self.state = ParserState.START_FIELD
         else:
-            self.field_was_numeric = self.dialect.quoting == QUOTE_NONNUMERIC
             self.add_char(c)
             self.state = ParserState.IN_FIELD
         return Decision.CONTINUE
@@ -234,9 +240,7 @@ class Parser:
             self.add_char(c)
             self.state = ParserState.IN_FIELD
         else:
-            raise csv.Error(
-                f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}"
-            )
+            raise csv.Error(f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}")
         return Decision.CONTINUE
 
     def process_char_in_eat_newline(self, c: str) -> Decision:
@@ -255,11 +259,15 @@ class Parser:
         else:
             field = "".join(self.field_so_far)
 
-        # Convert to float if QUOTE_NONNUMERIC
-        if self.dialect.quoting == QUOTE_NONNUMERIC and field and self.field_was_numeric:
-            self.field_was_numeric = False
-            field = float(field)
+        # Handle unquoted fields for special quote modes
+        if self.dialect.quoting == QUOTE_NONNUMERIC and not self.field_was_quoted:
+            field = float(field) if field else ""
+        elif self.dialect.quoting == QUOTE_STRINGS and not self.field_was_quoted:
+            field = float(field) if field else None
+        elif self.dialect.quoting == QUOTE_NOTNULL and not self.field_was_quoted:
+            field = field if field else None
 
+        self.field_was_quoted = False
         self.record_so_far.append(field)  # type: ignore
         self.field_so_far.clear()
 

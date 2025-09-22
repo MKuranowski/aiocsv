@@ -128,6 +128,8 @@ typedef enum {
     QUOTE_ALL = 1,
     QUOTE_NON_NUMERIC = 2,
     QUOTE_NONE = 3,
+    QUOTE_STRINGS = 4,
+    QUOTE_NOT_NULL = 5,
 } Quoting;
 
 typedef enum {
@@ -235,8 +237,8 @@ typedef struct {
     /// ParserState for the parser state machine.
     unsigned char state;
 
-    /// True if current field should be interpreted as a float.
-    bool field_was_numeric;
+    /// True if current field was quoted.
+    bool field_was_quoted;
 
     /// True if last returned character was a CR, used to avoid counting CR-LF as two separate lines.
     bool last_char_was_cr;
@@ -301,7 +303,8 @@ typedef struct {
     if (PyErr_Occurred()) {                                                                     \
         return 0;                                                                               \
     }                                                                                           \
-    if (quoting_value < (Py_ssize_t)QUOTE_MINIMAL || quoting_value > (Py_ssize_t)QUOTE_NONE) {  \
+    if (quoting_value < (Py_ssize_t)QUOTE_MINIMAL ||                                            \
+        quoting_value > (Py_ssize_t)QUOTE_NOT_NULL) {                                           \
         PyErr_Format(PyExc_ValueError, "dialect.quoting: unexpected value %zd", quoting_value); \
         return 0;                                                                               \
     }                                                                                           \
@@ -371,7 +374,7 @@ static PyObject* Parser_new(PyTypeObject* subtype, PyObject* args, PyObject* kwa
     self->field_size_limit = 0;
     self->line_num = 0;
     self->state = STATE_START_RECORD;
-    self->field_was_numeric = false;
+    self->field_was_quoted = false;
     self->last_char_was_cr = false;
     self->eof = false;
 
@@ -464,14 +467,32 @@ static int Parser_save_field(Parser* self) {
 
     self->field_so_far_len = 0;
 
-    // Cast the field to a float, if applicable
-    if (self->field_was_numeric) {
-        self->field_was_numeric = false;
+    // Cast the field to a float or None, if applicable
+    if (!self->field_was_quoted) {
+        // Check if this field should be converted to float or None
+        bool is_none = false;
+        bool is_float = false;
+        if (self->dialect.quoting == QUOTE_NON_NUMERIC) {
+            is_float = PyObject_IsTrue(field);
+        } else if (self->dialect.quoting == QUOTE_STRINGS) {
+            is_none = PyObject_Not(field);
+            is_float = !is_none;
+        } else if (self->dialect.quoting == QUOTE_NOT_NULL) {
+            is_none = PyObject_Not(field);
+        }
 
-        PyObject* field_as_float = PyFloat_FromString(field);
-        Py_DECREF(field);
-        if (!field_as_float) return 0;
-        field = field_as_float;
+        // Convert to None or float
+        if (is_none) {
+            Py_DECREF(field);
+            field = Py_NewRef(Py_None);
+        } else if (is_float) {
+            PyObject* field_as_float = PyFloat_FromString(field);
+            Py_DECREF(field);
+            if (!field_as_float) return 0;
+            field = field_as_float;
+        }
+    } else {
+        self->field_was_quoted = false;
     }
 
     // Append the field to the record
@@ -609,10 +630,10 @@ static Decision Parser_process_char_in_start_field(Parser* self, Py_UCS4 c) {
         self->state = STATE_START_RECORD;
         return DECISION_DONE;
     } else if (c == self->dialect.quotechar && self->dialect.quoting != QUOTE_NONE) {
+        self->field_was_quoted = true;
         self->state = STATE_IN_QUOTED_FIELD;
         return DECISION_CONTINUE;
     } else if (c == self->dialect.escapechar) {
-        self->field_was_numeric = self->dialect.quoting == QUOTE_NON_NUMERIC;
         self->state = STATE_ESCAPE;
         return DECISION_CONTINUE;
     } else if (c == self->dialect.delimiter) {
@@ -620,7 +641,6 @@ static Decision Parser_process_char_in_start_field(Parser* self, Py_UCS4 c) {
         self->state = STATE_START_FIELD;
         return DECISION_CONTINUE;
     } else {
-        self->field_was_numeric = self->dialect.quoting == QUOTE_NON_NUMERIC;
         if (!Parser_add_char(self, c)) return DECISION_ERROR;
         self->state = STATE_IN_FIELD;
         return DECISION_CONTINUE;

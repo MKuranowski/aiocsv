@@ -391,3 +391,50 @@ async def test_parsing_no_newline_at_the_end(parser: Type[Parser]):
         ["phi", "1.618"],
         ["e", "2.7183"],
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="csv.QUOTE_STRINGS was added in 3.12")
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_quote_strings(parser: Type[Parser]):
+    data = '3.14,,"abc",""\r\n'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)
+    csv_result = list(csv_parser)
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
+
+    assert csv_result == [[3.14, None, "abc", ""]]
+    assert custom_result == [[3.14, None, "abc", ""]]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="csv.QUOTE_STRINGS was added in 3.12")
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_quote_strings_non_float(parser: Type[Parser]):
+    data = "abc"
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)
+
+    with pytest.raises(ValueError):
+        list(csv_parser)
+
+    with pytest.raises(ValueError):
+        [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="csv.QUOTE_NOTNULL was added in 3.12")
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+async def test_parsing_quote_not_null(parser: Type[Parser]):
+    data = '3.14,,abc,""\r\n'
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NOTNULL, strict=True)
+    csv_result = list(csv_parser)
+    custom_result = [
+        r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
+    ]
+
+    assert csv_result == [["3.14", None, "abc", ""]]
+    assert custom_result == [["3.14", None, "abc", ""]]
