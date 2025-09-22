@@ -1,5 +1,6 @@
 # © Copyright 2020-2025 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
+# pyright: reportUnnecessaryComparison=false
 
 import csv
 import sys

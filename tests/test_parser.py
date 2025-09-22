@@ -399,7 +399,7 @@ async def test_parsing_no_newline_at_the_end(parser: Type[Parser]):
 async def test_parsing_quote_strings(parser: Type[Parser]):
     data = '3.14,,"abc",""\r\n'
 
-    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)  # type: ignore
     csv_result = list(csv_parser)
     custom_result = [
         r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
@@ -419,7 +419,7 @@ async def test_parsing_quote_strings(parser: Type[Parser]):
 async def test_parsing_quote_strings_non_float(parser: Type[Parser]):
     data = "abc"
 
-    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)  # type: ignore
     if sys.version_info < (3, 13):
         # https://github.com/python/cpython/issues/113732
         assert list(csv_parser) == [["abc"]]
@@ -437,7 +437,7 @@ async def test_parsing_quote_strings_non_float(parser: Type[Parser]):
 async def test_parsing_quote_not_null(parser: Type[Parser]):
     data = '3.14,,abc,""\r\n'
 
-    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NOTNULL, strict=True)
+    csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NOTNULL, strict=True)  # type: ignore
     csv_result = list(csv_parser)
     custom_result = [
         r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
