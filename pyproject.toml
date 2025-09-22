@@ -41,7 +41,7 @@ target-version = ['py39']
 [tool.isort]
 profile = "black"
 line_length = 99
-target-version = ['py39']
+py_version = 39
 
 [tool.pyright]
 typeCheckingMode = "strict"
