@@ -405,7 +405,11 @@ async def test_parsing_quote_strings(parser: Type[Parser]):
         r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
     ]
 
-    assert csv_result == [[3.14, None, "abc", ""]]
+    if sys.version_info < (3, 13):
+        # https://github.com/python/cpython/issues/113732
+        assert csv_result == [["3.14", "", "abc", ""]]
+    else:
+        assert csv_result == [[3.14, None, "abc", ""]]
     assert custom_result == [[3.14, None, "abc", ""]]
 
 
@@ -416,9 +420,12 @@ async def test_parsing_quote_strings_non_float(parser: Type[Parser]):
     data = "abc"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)
-
-    with pytest.raises(ValueError):
-        list(csv_parser)
+    if sys.version_info < (3, 13):
+        # https://github.com/python/cpython/issues/113732
+        assert list(csv_parser) == [["abc"]]
+    else:
+        with pytest.raises(ValueError):
+            list(csv_parser)
 
     with pytest.raises(ValueError):
         [r async for r in parser(AsyncStringIO(data), csv_parser.dialect)]  # type: ignore
@@ -436,5 +443,9 @@ async def test_parsing_quote_not_null(parser: Type[Parser]):
         r async for r in parser(AsyncStringIO(data), csv_parser.dialect)  # type: ignore
     ]
 
-    assert csv_result == [["3.14", None, "abc", ""]]
+    if sys.version_info < (3, 13):
+        # https://github.com/python/cpython/issues/113732
+        assert csv_result == [["3.14", "", "abc", ""]]
+    else:
+        assert csv_result == [["3.14", None, "abc", ""]]
     assert custom_result == [["3.14", None, "abc", ""]]

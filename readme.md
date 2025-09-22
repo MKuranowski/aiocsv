@@ -71,8 +71,8 @@ asyncio.run(main())
 
 ## Differences with `csv`
 
-`aiocsv` strives to be a drop-in replacement for Python's builtin
-[csv module](https://docs.python.org/3/library/csv.html). However, there are 3 notable differences:
+`aiocsv` strives to be a drop-in replacement for Python's builtin [csv module](https://docs.python.org/3/library/csv.html).
+However, there are a few notable differences, due to technical limitations or CPython bugs:
 
 - Readers accept objects with async `read` methods, instead of an AsyncIterable over lines
     from a file.
@@ -80,6 +80,8 @@ asyncio.run(main())
 - Changes to `csv.field_size_limit` are not picked up by existing Reader instances.
     The field size limit is cached on Reader instantiation to avoid expensive function calls
     on each character of the input.
+- `QUOTE_NOTNULL` and `QUOTE_STRINGS` work on readers even in 3.12. aiocsv does not replicate
+    [CPython bug #113732](https://github.com/python/cpython/issues/113732).
 
 Other, minor, differences include:
 - `AsyncReader.line_num`, `AsyncDictReader.line_num` and `AsyncDictReader.dialect` are not settable,
