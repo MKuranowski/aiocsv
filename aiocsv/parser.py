@@ -240,7 +240,9 @@ class Parser:
             self.add_char(c)
             self.state = ParserState.IN_FIELD
         else:
-            raise csv.Error(f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}")
+            raise csv.Error(
+                f"{self.dialect.delimiter!r} expected after {self.dialect.quotechar!r}",
+            )
         return Decision.CONTINUE
 
     def process_char_in_eat_newline(self, c: str) -> Decision:
