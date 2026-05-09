@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aiocsv"
 readme = "readme.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 authors = [
     {name = "Mikołaj Kuranowski", email = "mkuranowski+pypackages@gmail.com"},
@@ -36,12 +36,12 @@ version = {attr = "aiocsv.__version__"}
 
 [tool.black]
 line-length = 99
-target-version = ['py39']
+target-version = ['py310']
 
 [tool.isort]
 profile = "black"
 line_length = 99
-py_version = 39
+py_version = 310
 
 [tool.pyright]
 typeCheckingMode = "strict"
