@@ -1,4 +1,4 @@
-// © Copyright 2020-2025 Mikołaj Kuranowski
+// © Copyright 2020-2026 Mikołaj Kuranowski
 // SPDX-License-Identifier: MIT
 
 #include <assert.h>
@@ -162,6 +162,9 @@ typedef struct {
     /// C-friendly representation of the csv dialect.
     Dialect dialect;
 
+    /// ID of the thread that has created the _Parser, to ensure it's not shared threads
+    unsigned long thread_id;
+
     /// Limit for the field size
     long field_size_limit;
 
@@ -294,6 +297,8 @@ static PyObject* Parser_new(PyTypeObject* subtype, PyObject* args, PyObject* kwa
     ModuleState* state = PyType_GetModuleState(subtype);
     Parser* self = PyObject_GC_New(Parser, subtype);
     if (!self) return NULL;
+
+    self->thread_id = PyThread_get_thread_ident();
 
     // Zero-initialize all custom Parser fields. In case the initialization fails,
     // we need to ensure the deallocator doesn't stumble on garbage values.
@@ -716,6 +721,12 @@ ret:
 }
 
 static PyObject* Parser_next(Parser* self) {
+    // Prevent _Parser from being shared across threads
+    if (self->thread_id != PyThread_get_thread_ident()) {
+        PyErr_SetString(PyExc_RuntimeError, "aiocsv._parser.Parser instance must not be shared across threads");
+        return NULL;
+    }
+
     // Loop until a record has been successfully parsed or EOF has been hit
     PyObject* record = NULL;
     while (!record && (self->buffer_str || !self->eof)) {
