@@ -4,6 +4,5 @@ pytest
 pytest-asyncio
 setuptools
 wheel
-isort
-black
+ruff
 pyright

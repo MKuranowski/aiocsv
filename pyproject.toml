@@ -34,14 +34,9 @@ aiocsv = ["py.typed"]
 [tool.setuptools.dynamic]
 version = {attr = "aiocsv.__version__"}
 
-[tool.black]
+[tool.ruff]
 line-length = 99
-target-version = ['py310']
-
-[tool.isort]
-profile = "black"
-line_length = 99
-py_version = 310
+target-version = "py310"
 
 [tool.pyright]
 typeCheckingMode = "strict"

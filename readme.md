@@ -5,7 +5,7 @@ Asynchronous CSV reading and writing.
 
 ## Installation
 
-`pip install aiocsv`. Python 3.8+ is required.
+`pip install aiocsv`. Python 3.10+ is required.
 
 This module contains an extension written in C. Pre-build binaries
 may not be available for your configuration. You might need a C compiler
@@ -292,9 +292,8 @@ with the Python extension, pyright is already bundled and doesn't need to be ins
 
 Use [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python),
 [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance)
-(should be installed automatically alongside Python extension),
-[black](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter) and
-[isort](https://marketplace.visualstudio.com/items?itemName=ms-python.isort) Python extensions.
+(should be installed automatically alongside Python extension), and
+[Ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) extensions.
 
 You will need to install all dev dependencies from `requirements.dev.txt`, except for `pyright`.
 Recommended `.vscode/settings.json`:
@@ -308,6 +307,7 @@ Recommended `.vscode/settings.json`:
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.organizeImports": "always"
@@ -332,7 +332,7 @@ config file looks like this:
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/include/python3.11"
+                "/usr/include/python3.14"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
