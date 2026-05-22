@@ -289,6 +289,7 @@ static int Parser_traverse(Parser* self, visitproc visit, void* arg) {
 static int Parser_clear(Parser* self) {
     Py_CLEAR(self->reader);
     Py_CLEAR(self->current_read);
+    Py_CLEAR(self->buffer_str);
     Py_CLEAR(self->record_so_far);
     return 0;
 }
