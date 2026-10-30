@@ -24,13 +24,14 @@ PARSER_NAMES: list[str] = ["pure_python_parser", "c_parser"]
 class AsyncStringIO:
     """Simple wrapper to fulfill WithAsyncRead around a string"""
 
-    def __init__(self, data: str = "") -> None:
+    def __init__(self, data: str = "", chunk_size: int = 4096) -> None:
         self.ptr = 0
         self.data = data
+        self.chunk_size = chunk_size
 
     async def read(self, size: int) -> str:
         start = self.ptr
-        self.ptr += size
+        self.ptr += min(size, self.chunk_size)
         return self.data[start : self.ptr]
 
 
@@ -264,6 +265,48 @@ async def test_parsing_line_num(parser: type[Parser]):
 
     assert csv_result == expected_result
     assert custom_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+@pytest.mark.parametrize(
+    ("data", "expected_result"),
+    [
+        ("ID,Value\nx,ok\r", [["ID", "Value"], ["x", "ok"]]),
+        ("ID,Value\nbroken\r", [["ID", "Value"], ["broken"]]),
+    ],
+)
+async def test_parsing_final_cr(parser: type[Parser], data: str, expected_result: list[list[str]]):
+    csv_result = list(csv.reader(io.StringIO(data, newline="")))
+    custom_result = [
+        row
+        async for row in parser(AsyncStringIO(data), csv.get_dialect("excel"))  # type: ignore
+    ]
+
+    assert custom_result == csv_result == expected_result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
+@pytest.mark.parametrize("chunk_size", [1, 2, 4096])
+async def test_parsing_line_num_with_consecutive_cr(parser: type[Parser], chunk_size: int):
+    data = "a\r\r\rb\r"
+
+    csv_parser = csv.reader(io.StringIO(data, newline=""))
+    csv_result = [(csv_parser.line_num, row) for row in csv_parser]
+
+    custom_parser = parser(
+        AsyncStringIO(data, chunk_size=chunk_size),
+        csv_parser.dialect,  # type: ignore
+    )
+    custom_result = [(custom_parser.line_num, row) async for row in custom_parser]
+
+    assert custom_result == csv_result == [
+        (1, ["a"]),
+        (2, []),
+        (3, []),
+        (4, ["b"]),
+    ]
 
 
 @pytest.mark.asyncio
