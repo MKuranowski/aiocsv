@@ -3,7 +3,7 @@
 
 __title__ = "aiocsv"
 __description__ = "Asynchronous CSV reading/writing"
-__version__ = "1.4.1"
+__version__ = "1.4.2"
 
 __url__ = "https://github.com/MKuranowski/aiocsv"
 __author__ = "Mikołaj Kuranowski"
