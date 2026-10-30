@@ -5,7 +5,7 @@ Asynchronous CSV reading and writing.
 
 ## Installation
 
-`pip install aiocsv`. Python 3.10+ is required.
+`pip install aiocsv`. Python 3.11+ is required.
 
 This module contains an extension written in C. Pre-build binaries
 may not be available for your configuration. You might need a C compiler
