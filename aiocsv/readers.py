@@ -1,10 +1,10 @@
-# © Copyright 2020-2025 Mikołaj Kuranowski
+# © Copyright 2020-2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
 # cSpell: words asyncfile restkey restval
 
 import csv
-from typing import Dict, List, Optional, Sequence
+from collections.abc import Sequence
 from warnings import warn
 
 from typing_extensions import Unpack
@@ -50,7 +50,7 @@ class AsyncReader:
     def __aiter__(self):
         return self
 
-    async def __anext__(self) -> List[str]:
+    async def __anext__(self) -> list[str]:
         return await self._parser.__anext__()
 
 
@@ -65,16 +65,16 @@ class AsyncDictReader:
     def __init__(
         self,
         asyncfile: WithAsyncRead,
-        fieldnames: Optional[Sequence[str]] = None,
-        restkey: Optional[str] = None,
-        restval: Optional[str] = None,
+        fieldnames: Sequence[str] | None = None,
+        restkey: str | None = None,
+        restval: str | None = None,
         dialect: CsvDialectArg = "excel",
         **csv_dialect_kwargs: Unpack[CsvDialectKwargs],
     ) -> None:
 
-        self.fieldnames: Optional[List[str]] = list(fieldnames) if fieldnames else None
-        self.restkey: Optional[str] = restkey
-        self.restval: Optional[str] = restval
+        self.fieldnames: list[str] | None = list(fieldnames) if fieldnames else None
+        self.restkey: str | None = restkey
+        self.restval: str | None = restval
         self.reader = AsyncReader(asyncfile, dialect=dialect, **csv_dialect_kwargs)
 
     @property
@@ -85,7 +85,7 @@ class AsyncDictReader:
     def line_num(self) -> int:
         return self.reader.line_num
 
-    async def get_fieldnames(self) -> List[str]:
+    async def get_fieldnames(self) -> list[str]:
         """Gets the fieldnames of the CSV file being read.
 
         This function forces a read of the fieldnames if they
@@ -102,7 +102,7 @@ class AsyncDictReader:
     def __aiter__(self):
         return self
 
-    async def __anext__(self) -> Dict[str, str]:
+    async def __anext__(self) -> dict[str, str]:
         # check if header needs to be parsed
         if self.fieldnames is None:
             self.fieldnames = await self.reader.__anext__()

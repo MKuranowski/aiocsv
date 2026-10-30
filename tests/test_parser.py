@@ -1,7 +1,8 @@
 import csv
 import io
 import sys
-from typing import AsyncIterator, Callable, List, Protocol, Type
+from collections.abc import AsyncIterator, Callable
+from typing import Protocol
 
 import pytest
 
@@ -11,13 +12,13 @@ from aiocsv.protocols import DialectLike, WithAsyncRead
 
 
 class Parser(Protocol):
-    def __aiter__(self) -> AsyncIterator[List[str]]: ...
+    def __aiter__(self) -> AsyncIterator[list[str]]: ...
     @property
     def line_num(self) -> int: ...
 
 
-PARSERS: List[Callable[[WithAsyncRead, DialectLike], Parser]] = [PyParser, CParser]
-PARSER_NAMES: List[str] = ["pure_python_parser", "c_parser"]
+PARSERS: list[Callable[[WithAsyncRead, DialectLike], Parser]] = [PyParser, CParser]
+PARSER_NAMES: list[str] = ["pure_python_parser", "c_parser"]
 
 
 class AsyncStringIO:
@@ -35,7 +36,7 @@ class AsyncStringIO:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_simple(parser: Type[Parser]):
+async def test_parsing_simple(parser: type[Parser]):
     data = 'abc,"def",ghi\r\n' '"j""k""l",mno,pqr\r\n' 'stu,vwx,"yz"\r\n'
 
     csv_result = list(csv.reader(io.StringIO(data, newline="")))
@@ -53,7 +54,7 @@ async def test_parsing_simple(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_escapes(parser: Type[Parser]):
+async def test_parsing_escapes(parser: type[Parser]):
     data = 'ab$"c,de$\nf\r\n' '"$"",$$gh$"\r\n' '"i\nj",k$,\r\n'
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
     csv_result = list(csv_parser)
@@ -67,7 +68,7 @@ async def test_parsing_escapes(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_empty(parser: Type[Parser]):
+async def test_parsing_empty(parser: type[Parser]):
     data = "\r\n  a,,\r\n,\r\n  "
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), skipinitialspace=True, strict=True)
@@ -82,7 +83,7 @@ async def test_parsing_empty(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_nonnumeric(parser: Type[Parser]):
+async def test_parsing_nonnumeric(parser: type[Parser]):
     data = '1,2\n"a",,3.14'
 
     csv_parser = csv.reader(
@@ -99,7 +100,7 @@ async def test_parsing_nonnumeric(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_nonnumeric_invalid(parser: Type[Parser]):
+async def test_parsing_nonnumeric_invalid(parser: type[Parser]):
     data = "1,2\na,3.14\n"
 
     csv_parser = csv.reader(
@@ -115,7 +116,7 @@ async def test_parsing_nonnumeric_invalid(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_none_quoting(parser: Type[Parser]):
+async def test_parsing_none_quoting(parser: type[Parser]):
     data = '1" hello,"2\na","3.14"'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NONE, strict=True)
@@ -130,7 +131,7 @@ async def test_parsing_none_quoting(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_weird_quotes(parser: Type[Parser]):
+async def test_parsing_weird_quotes(parser: type[Parser]):
     data = 'a"b,$"cd"\r\n' '"ef"g",\r\n' '"$"""","e"$f"\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
@@ -145,7 +146,7 @@ async def test_parsing_weird_quotes(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_strict_quoting(parser: Type[Parser]):
+async def test_parsing_strict_quoting(parser: type[Parser]):
     data = '"ab"c,def\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), strict=True)
@@ -163,7 +164,7 @@ async def test_parsing_strict_quoting(parser: Type[Parser]):
     reason="CPython bug gh-113785 was fixed in 3.12.9",
 )
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_weird_quotes_nonnumeric(parser: Type[Parser]):
+async def test_parsing_weird_quotes_nonnumeric(parser: type[Parser]):
     data = '3.0,\r\n"1."5,"15"\r\n$2,"-4".5\r\n-5$.2,-11'
 
     csv_parser = csv.reader(
@@ -183,7 +184,7 @@ async def test_parsing_weird_quotes_nonnumeric(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_escape_after_quote_in_quoted(parser: Type[Parser]):
+async def test_parsing_escape_after_quote_in_quoted(parser: type[Parser]):
     data = '"fo"$o\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
@@ -199,7 +200,7 @@ async def test_parsing_escape_after_quote_in_quoted(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_escaped_crlf(parser: Type[Parser]):
+async def test_parsing_escaped_crlf(parser: type[Parser]):
     data = "foo$\r\nbar\r\n"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
@@ -215,7 +216,7 @@ async def test_parsing_escaped_crlf(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_escaped_crlf_in_quoted(parser: Type[Parser]):
+async def test_parsing_escaped_crlf_in_quoted(parser: type[Parser]):
     data = '"foo$\r\n",bar\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
@@ -231,7 +232,7 @@ async def test_parsing_escaped_crlf_in_quoted(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_consecutive_newlines(parser: Type[Parser]):
+async def test_parsing_consecutive_newlines(parser: type[Parser]):
     data = "foo\r\rbar\n\rbaz\n\nspam\r\n\neggs"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$")
@@ -247,7 +248,7 @@ async def test_parsing_consecutive_newlines(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_line_num(parser: Type[Parser]):
+async def test_parsing_line_num(parser: type[Parser]):
     data = 'foo,bar,baz\r\nspam,"egg\reggs",milk\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""))
@@ -267,7 +268,7 @@ async def test_parsing_line_num(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_field_size_limit(parser: Type[Parser]):
+async def test_parsing_field_size_limit(parser: type[Parser]):
     csv.field_size_limit(64)
 
     data = "a" * 65 + "\r\n"
@@ -283,7 +284,7 @@ async def test_parsing_field_size_limit(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_unterminated_quote(parser: Type[Parser]):
+async def test_parsing_unterminated_quote(parser: type[Parser]):
     data = '"abc\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), strict=True)
@@ -297,7 +298,7 @@ async def test_parsing_unterminated_quote(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_unterminated_quote_non_strict(parser: Type[Parser]):
+async def test_parsing_unterminated_quote_non_strict(parser: type[Parser]):
     data = '"abc\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), strict=False)
@@ -314,7 +315,7 @@ async def test_parsing_unterminated_quote_non_strict(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_eof_in_escape(parser: Type[Parser]):
+async def test_parsing_eof_in_escape(parser: type[Parser]):
     data = "a$"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
@@ -328,7 +329,7 @@ async def test_parsing_eof_in_escape(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_eof_in_escape_non_strict(parser: Type[Parser]):
+async def test_parsing_eof_in_escape_non_strict(parser: type[Parser]):
     data = "a$"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
@@ -345,7 +346,7 @@ async def test_parsing_eof_in_escape_non_strict(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_eof_in_quoted_escape(parser: Type[Parser]):
+async def test_parsing_eof_in_quoted_escape(parser: type[Parser]):
     data = '"a$'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=True)
@@ -359,7 +360,7 @@ async def test_parsing_eof_in_quoted_escape(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_eof_in_quoted_escape_non_strict(parser: Type[Parser]):
+async def test_parsing_eof_in_quoted_escape_non_strict(parser: type[Parser]):
     data = '"a$'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), escapechar="$", strict=False)
@@ -376,7 +377,7 @@ async def test_parsing_eof_in_quoted_escape_non_strict(parser: Type[Parser]):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_no_newline_at_the_end(parser: Type[Parser]):
+async def test_parsing_no_newline_at_the_end(parser: type[Parser]):
     data = "pi,3.1416\r\nsqrt2,1.4142\r\nphi,1.618\r\ne,2.7183"
 
     csv_result = list(csv.reader(io.StringIO(data, newline="")))
@@ -396,7 +397,7 @@ async def test_parsing_no_newline_at_the_end(parser: Type[Parser]):
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.version_info < (3, 12), reason="csv.QUOTE_STRINGS was added in 3.12")
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_quote_strings(parser: Type[Parser]):
+async def test_parsing_quote_strings(parser: type[Parser]):
     data = '3.14,,"abc",""\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)  # type: ignore
@@ -416,7 +417,7 @@ async def test_parsing_quote_strings(parser: Type[Parser]):
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.version_info < (3, 12), reason="csv.QUOTE_STRINGS was added in 3.12")
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_quote_strings_non_float(parser: Type[Parser]):
+async def test_parsing_quote_strings_non_float(parser: type[Parser]):
     data = "abc"
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_STRINGS, strict=True)  # type: ignore
@@ -434,7 +435,7 @@ async def test_parsing_quote_strings_non_float(parser: Type[Parser]):
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.version_info < (3, 12), reason="csv.QUOTE_NOTNULL was added in 3.12")
 @pytest.mark.parametrize("parser", PARSERS, ids=PARSER_NAMES)
-async def test_parsing_quote_not_null(parser: Type[Parser]):
+async def test_parsing_quote_not_null(parser: type[Parser]):
     data = '3.14,,abc,""\r\n'
 
     csv_parser = csv.reader(io.StringIO(data, newline=""), quoting=csv.QUOTE_NOTNULL, strict=True)  # type: ignore

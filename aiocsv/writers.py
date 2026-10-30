@@ -1,11 +1,12 @@
-# © Copyright 2020-2025 Mikołaj Kuranowski
+# © Copyright 2020-2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
 # cSpell: words asyncfile extrasaction fieldnames restval
 
 import csv
 import io
-from typing import Any, Iterable, Literal, Mapping, Optional, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, Literal
 
 from typing_extensions import Unpack
 
@@ -75,7 +76,7 @@ class AsyncDictWriter:
         self,
         asyncfile: WithAsyncWrite,
         fieldnames: Sequence[str],
-        restval: Optional[Any] = "",
+        restval: Any = "",
         extrasaction: Literal["raise", "ignore"] = "raise",
         dialect: CsvDialectArg = "excel",
         **csv_dialect_kwargs: Unpack[CsvDialectKwargs],

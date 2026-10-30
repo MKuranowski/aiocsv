@@ -15,4 +15,4 @@ __license__ = "MIT"
 from .readers import AsyncDictReader, AsyncReader
 from .writers import AsyncDictWriter, AsyncWriter
 
-__all__ = ["AsyncReader", "AsyncDictReader", "AsyncWriter", "AsyncDictWriter"]
+__all__ = ["AsyncDictReader", "AsyncDictWriter", "AsyncReader", "AsyncWriter"]

@@ -1,3 +1,4 @@
+import asyncio
 import os
 from tempfile import NamedTemporaryFile
 
@@ -40,11 +41,11 @@ async def test_simple_write():
             await writer.writerows(VALUES[1:])
 
         # Read original and created files
-        with open(target_name, mode="r", encoding="ascii") as created_f:
-            created = created_f.read()
-
-        with open(FILENAME, mode="r", encoding="ascii") as original_f:
-            original = original_f.read()
+        async with (
+            aiofiles.open(target_name, mode="r", encoding="ascii") as created_f,
+            aiofiles.open(FILENAME, mode="r", encoding="ascii") as original_f,
+        ):
+            created, original = await asyncio.gather(created_f.read(), original_f.read())
 
         # Check if content matches
         assert created == original

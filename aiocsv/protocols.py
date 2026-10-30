@@ -1,10 +1,8 @@
-# © Copyright 2020-2025 Mikołaj Kuranowski
+# © Copyright 2020-2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 
 import sys
-from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, Type, TypedDict, Union
-
-from typing_extensions import NotRequired
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, Protocol, TypedDict, Union
 
 if TYPE_CHECKING:
     import csv
@@ -16,30 +14,30 @@ else:
 
 
 class WithAsyncWrite(Protocol):
-    async def write(self, __b: str) -> Any: ...
+    async def write(self, b: str, /) -> Any: ...
 
 
 class WithAsyncRead(Protocol):
-    async def read(self, __size: int) -> str: ...
+    async def read(self, size: int, /) -> str: ...
 
 
 class DialectLike(Protocol):
     delimiter: str
-    quotechar: Optional[str]
-    escapechar: Optional[str]
+    quotechar: str | None
+    escapechar: str | None
     doublequote: bool
     skipinitialspace: bool
     quoting: _QuotingType
     strict: bool
 
 
-CsvDialectArg = Union[str, "csv.Dialect", Type["csv.Dialect"]]
+CsvDialectArg = Union[str, "csv.Dialect", type["csv.Dialect"]]
 
 
 class CsvDialectKwargs(TypedDict):
     delimiter: NotRequired[str]
-    quotechar: NotRequired[Optional[str]]
-    escapechar: NotRequired[Optional[str]]
+    quotechar: NotRequired[str | None]
+    escapechar: NotRequired[str | None]
     doublequote: NotRequired[bool]
     skipinitialspace: NotRequired[bool]
     lineterminator: NotRequired[str]

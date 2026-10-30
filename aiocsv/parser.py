@@ -1,11 +1,12 @@
-# © Copyright 2020-2025 Mikołaj Kuranowski
+# © Copyright 2020-2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: MIT
 # pyright: reportUnnecessaryComparison=false
 
 import csv
 import sys
+from collections.abc import AsyncIterator, Awaitable, Generator, Sequence
 from enum import IntEnum, auto
-from typing import Any, AsyncIterator, Awaitable, Final, Generator, List, Optional, Sequence, Union
+from typing import Any, Final
 
 from .protocols import DialectLike, WithAsyncRead
 
@@ -54,39 +55,39 @@ class Parser:
         self.dialect = dialect
         self.reader = reader
 
-        self.current_read: Optional[Generator[Any, None, str]] = None
+        self.current_read: Generator[Any, None, str] | None = None
         self.buffer: str = ""
         self.eof: bool = False
         self.line_num: int = 0
 
         self.state = ParserState.START_RECORD
-        self.record_so_far: List[str] = []
-        self.field_so_far: List[str] = []
+        self.record_so_far: list[str] = []
+        self.field_so_far: list[str] = []
         self.field_limit: int = csv.field_size_limit()
         self.field_was_quoted: bool = False
         self.last_char_was_cr: bool = False
 
     # AsyncIterator[List[str]] interface
 
-    def __aiter__(self) -> AsyncIterator[List[str]]:
+    def __aiter__(self) -> AsyncIterator[list[str]]:
         return self
 
-    def __anext__(self) -> Awaitable[List[str]]:
+    def __anext__(self) -> Awaitable[list[str]]:
         return self
 
     # Awaitable[List[str]] interface
 
-    def __await__(self) -> Generator[Any, None, List[str]]:
+    def __await__(self) -> Generator[Any, None, list[str]]:
         return self  # type: ignore
 
     # Generator[Any, None, List[str]] interface
 
-    def __iter__(self) -> Generator[Any, None, List[str]]:
+    def __iter__(self) -> Generator[Any, None, list[str]]:
         return self  # type: ignore
 
     def __next__(self) -> Any:
         # Loop until a record has been successfully parsed or EOF has been hit
-        record: Optional[List[str]] = None
+        record: list[str] | None = None
         while record is None and (self.buffer or not self.eof):
             # No pending read and no data available - initiate one
             if not self.buffer and self.current_read is None:
@@ -114,7 +115,7 @@ class Parser:
 
     # Straightforward parser interface
 
-    def try_parse(self) -> Optional[List[str]]:
+    def try_parse(self) -> list[str] | None:
         decision = Decision.CONTINUE
 
         while decision is Decision.CONTINUE and self.buffer:
@@ -256,7 +257,7 @@ class Parser:
         self.field_so_far.append(c)
 
     def save_field(self) -> None:
-        field: Union[str, float, None]
+        field: str | float | None
         if self.dialect.skipinitialspace:
             field = "".join(self.field_so_far[self.find_first_non_space(self.field_so_far) :])
         else:
@@ -281,7 +282,7 @@ class Parser:
         if not self.state.is_end_of_record():
             self.save_field()
 
-    def extract_record(self) -> List[str]:
+    def extract_record(self) -> list[str]:
         r = self.record_so_far.copy()
         self.record_so_far.clear()
         return r
