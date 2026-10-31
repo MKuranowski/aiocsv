@@ -119,11 +119,16 @@ class Parser:
         decision = Decision.CONTINUE
 
         while decision is Decision.CONTINUE and self.buffer:
-            decision = self.process_char(self.get_char_and_increment_line_num())
+            c = self.buffer[0]
+            decision = self.process_char(c)
             if decision is not Decision.DONE_WITHOUT_CONSUMING:
+                self.increment_line_num(c)
                 self.buffer = self.buffer[1:]
 
-        if decision is not Decision.CONTINUE or (self.eof and not self.state.is_end_of_record()):
+        if decision is not Decision.CONTINUE or (
+            self.eof
+            and (not self.state.is_end_of_record() or self.state is ParserState.EAT_NEWLINE)
+        ):
             if self.dialect.strict and self.state.is_unexpected_at_eof():
                 raise csv.Error("unexpected end of data")
             self.add_field_at_eof()
@@ -287,8 +292,7 @@ class Parser:
         self.record_so_far.clear()
         return r
 
-    def get_char_and_increment_line_num(self) -> str:
-        c = self.buffer[0]
+    def increment_line_num(self, c: str) -> None:
         if c == "\r":
             self.line_num += 1
             self.last_char_was_cr = True
@@ -299,7 +303,6 @@ class Parser:
                 self.line_num += 1
         else:
             self.last_char_was_cr = False
-        return c
 
     @staticmethod
     def find_first_non_space(x: Sequence[str]) -> int:
