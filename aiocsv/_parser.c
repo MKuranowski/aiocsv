@@ -461,11 +461,13 @@ static inline PyObject* Parser_extract_record(Parser* self) {
     return lst ? lst : PyList_New(0);
 }
 
-static Py_UCS4 Parser_get_char_and_increment_line_num(Parser* self) {
+static Py_UCS4 Parser_get_char(Parser* self) {
     assert(self->buffer_str);
     assert(self->buffer_idx < PyUnicode_GET_LENGTH(self->buffer_str));
-    Py_UCS4 c = PyUnicode_READ_CHAR(self->buffer_str, self->buffer_idx);
+    return PyUnicode_READ_CHAR(self->buffer_str, self->buffer_idx);
+}
 
+static void Parser_increment_line_num(Parser* self, Py_UCS4 c) {
     if (c == '\r') {
         ++self->line_num;
         self->last_char_was_cr = true;
@@ -475,8 +477,6 @@ static Py_UCS4 Parser_get_char_and_increment_line_num(Parser* self) {
     } else {
         self->last_char_was_cr = false;
     }
-
-    return c;
 }
 
 static Decision Parser_process_char_in_eat_newline(Parser* self, Py_UCS4 c) {
@@ -625,7 +625,7 @@ static Decision Parser_process_char(Parser* self, Py_UCS4 c) {
 static PyObject* Parser_try_parse(Parser* self) {
     Decision decision = DECISION_CONTINUE;
     while (decision == DECISION_CONTINUE && Parser_has_char(self)) {
-        Py_UCS4 c = Parser_get_char_and_increment_line_num(self);
+        Py_UCS4 c = Parser_get_char(self);
         decision = Parser_process_char(self, c);
 
         if (decision == DECISION_ERROR) {
@@ -638,10 +638,14 @@ static PyObject* Parser_try_parse(Parser* self) {
             return NULL;
         }
 
-        if (decision != DECISION_DONE_WITHOUT_CONSUMING) ++self->buffer_idx;
+        if (decision != DECISION_DONE_WITHOUT_CONSUMING) {
+            Parser_increment_line_num(self, c);
+            ++self->buffer_idx;
+        }
     }
 
-    if (decision != DECISION_CONTINUE || (self->eof && !state_is_end_of_record(self->state))) {
+    if (decision != DECISION_CONTINUE ||
+        (self->eof && (!state_is_end_of_record(self->state) || self->state == STATE_EAT_NEWLINE))) {
         if (self->dialect.strict && state_is_unexpected_at_eof(self->state)) {
             PyErr_SetString(parser_get_module_state(self)->csv_error, "unexpected end of data");
             return NULL;
